@@ -1,9 +1,12 @@
 ModernTimes Changelog
 =====================
 
-0.3.2 (pending)
+0.3.11
 -----
 
- - Bug fixes
- - Allow response options like time_to_live and persistence in publisher
+ - Dummy publishing mode was not thread safe
 
+0.3.10
+-----
+
+ - Fixes for post_request handling

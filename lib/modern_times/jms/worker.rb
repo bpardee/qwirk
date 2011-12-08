@@ -139,21 +139,15 @@ module ModernTimes
             end
           end
           ModernTimes.logger.info {"#{self}::on_message (#{('%.1f' % (@time_track.last_time*1000.0))}ms)"} if ModernTimes::JMS::Connection.log_times?
+          ModernTimes.logger.flush if ModernTimes.logger.respond_to?(:flush)
         end
         @status = 'Exited'
         ModernTimes.logger.info "#{self}: Exiting"
-#      rescue javax.jms.IllegalStateException => e
-#        #if e.cause.code == Java::org.jms.api.core.JMSException::OBJECT_CLOSED
-#          # Normal exit
-#          @status = 'Exited'
-#          ModernTimes.logger.info "#{self}: Exiting due to possible close: #{e.message}\n\t#{e.backtrace.join("\n\t")}"
-#        #else
-#        #  @status = "Exited with JMS exception #{e.message}"
-#        #  ModernTImes.logger.error "#{self} JMSException: #{e.message}\n#{e.backtrace.join("\n")}"
-#        #end
       rescue Exception => e
         @status = "Exited with exception #{e.message}"
         ModernTimes.logger.error "#{self}: Exception, thread terminating: #{e.message}\n\t#{e.backtrace.join("\n\t")}"
+      ensure
+        ModernTimes.logger.flush if ModernTimes.logger.respond_to?(:flush)
       end
 
       def stop
@@ -171,6 +165,10 @@ module ModernTimes
 
       def to_s
         "#{@real_destination_options.to_a.join('=>')}:#{index}"
+      end
+
+      def log_backtrace(e)
+        ModernTimes.logger.error "\t#{e.backtrace.join("\n\t")}"
       end
 
       #########
@@ -191,7 +189,6 @@ module ModernTimes
         on_exception(e)
       ensure
         ModernTimes.logger.debug {"#{self}: Finished processing message"}
-        ModernTimes.logger.flush if ModernTimes.logger.respond_to?(:flush)
       end
 
       def increment_error_count
@@ -212,10 +209,6 @@ module ModernTimes
       rescue Exception => e
         ModernTimes.logger.error "#{self}: Exception in exception reply: #{e.message}"
         log_backtrace(e)
-      end
-
-      def log_backtrace(e)
-        ModernTimes.logger.error "\t#{e.backtrace.join("\n\t")}"
       end
     end
   end

@@ -37,16 +37,26 @@ module ModernTimes
           end
         end
 
-        # Create Async Queue and handle requests
-        #self.async_queue_name = self.async_address = "Messaging::Client.async"
-        #self.on_message(self.async_address, self.async_queue_name) do |request|
-        #  self.async_on_message(request)
-        #end
-
       else
         Rails.logger.info "Messaging disabled"
         @is_jms_enabled = false
-        ModernTimes::JMS::Publisher.setup_dummy_publishing(rails_workers.map {|klass| klass.new})
+        worker_file     = File.join(Rails.root, "config", "workers.yml")
+        worker_pools = []
+        ModernTimes::Manager.parse_worker_file(worker_file, @env) do |klass, count, options|
+          # Create a pool for each worker so a single instance won't have to be thread safe when multiple http request hit it concurrently.
+          worker_pools << GenePool.new(:pool_size => count, :logger => Rails.logger) do
+            klass.new(options)
+          end
+        end
+        # If no config, then just create a worker_pool for each class in the app/workers directory
+        if worker_pools.empty?
+          worker_pools = rails_workers.map do |klass|
+            GenePool.new(:pool_size => 1, :logger => Rails.logger) do
+              klass.new({})
+            end
+          end
+        end
+        ModernTimes::JMS::Publisher.setup_dummy_publishing(worker_pools)
       end
     end
 
@@ -75,8 +85,6 @@ module ModernTimes
         end
         workers
       end
-      #file = "#{Rails.root}/config/workers.yml"
-      #raise "No worker config file #{file}" unless File.exist?(file)
     end
 
     def config
