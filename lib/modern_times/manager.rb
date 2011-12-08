@@ -41,12 +41,26 @@ module ModernTimes
       end
 
       parent_bean.bean_add_child(@name, self)
+      start_timer_thread
       stop_on_signal if options[:stop_on_signal]
+    end
+
+    def start_timer_thread
+      # TODO: Optionize hard-coded values
+      @timer_thread = Thread.new do
+        while !@stopped
+          @worker_configs.each do |worker_config|
+            worker_config.periodic_call
+          end
+        end
+        sleep 20
+      end
     end
 
     def stop
       return if @stopped
       @stopped = true
+      @timer_thread.wakeup
       @worker_configs.each { |worker_config| worker_config.stop }
     end
 

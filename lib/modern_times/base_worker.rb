@@ -1,12 +1,10 @@
 require 'rumx'
 
 module ModernTimes
+  # TODO: Is this necessary anymore or just put in worker.rb?  Decide when flat file queue_adapter is implemented.
   module BaseWorker
-    include Rumx::Bean
 
     attr_accessor :index, :thread, :config
-    # WorkerConfig sets the index but we don't want to make it a writable attribute
-    bean_attr_reader :index, :integer, "Index of this worker instance"
 
     module ClassMethods
       def default_name
@@ -19,9 +17,9 @@ module ModernTimes
         @config_class ||= Class.new(WorkerConfig)
       end
 
+      # Default values for all the config attributes
       def default_config
-        # max_count is the only config attribute defined in worker_config so we hack it's default value of zero here
-        @default_config ||= {:max_count => 0}
+        @default_config ||= WorkerConfig.initial_default_config
       end
 
       #config_accessor :sleep_time, :float, 'Number of seconds to sleep between messages', 5

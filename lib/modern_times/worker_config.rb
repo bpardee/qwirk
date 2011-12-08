@@ -9,11 +9,17 @@ module ModernTimes
     # The adapter refers to the corresponding class in ModernTimes::QueueAdapter::<type>::WorkerConfig
     attr_reader        :adapter
 
-    bean_reader        :count,        :integer, 'Current number of workers'
-    bean_attr_accessor :max_count,    :integer, 'Max number of workers allowed', :config_item => true
-    bean_attr_accessor :warn_timeout, :float,   'Idle timeout where a warning message will be logged if unable to acquire a worker (i.e., all workers are currently busy)', :config_item => true
-    bean_attr_embed    :adapter,                'Adapter for worker queue interface'
-    bean_attr_embed    :timer,                  'Track the times for this worker'
+    bean_reader        :count,               :integer, 'Current number of workers'
+    bean_attr_accessor :max_count,           :integer, 'Max number of workers allowed', :config_item => true
+    bean_attr_accessor :warn_timeout,        :float,   'Idle timeout where a warning message will be logged if unable to acquire a worker (i.e., all workers are currently busy)', :config_item => true
+    bean_attr_accessor :idle_worker_timeout, :integer, 'Timeout where an idle worker will be removed from the worker pool and it\'s resources closed (0 for no removal)', :config_item => true
+    bean_attr_embed    :adapter,                       'Adapter for worker queue interface'
+    bean_attr_embed    :timer,                         'Track the times for this worker'
+
+    # Define the default config values for the attributes all workers will share.  These will be sent as options to the constructor
+    def self.initial_default_config
+      {:max_count => 0, :warn_timeout => 0.25, :idle_worker_timeout => 60}
+    end
 
     # Create new WorkerConfig to manage workers of a common class
     def initialize(name, manager, worker_class, options)
@@ -120,6 +126,12 @@ module ModernTimes
 
     def unmarshal_response(marshaled_object)
       @marshaler.unmarshal(marshaled_object)
+    end
+
+    def periodic_call
+      if @gene_pool && @idle_worker_timeout > 0
+        @gene_pool.remove_idle(@idle_worker_timeout)
+      end
     end
 
     def to_s
