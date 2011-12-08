@@ -1,30 +1,35 @@
+# encoding: UTF-8
 require 'rubygems'
-require 'rake'
-require 'rake/testtask'
-
 begin
-  require 'jeweler'
-  Jeweler::Tasks.new do |gemspec|
-    gemspec.name = 'modern_times'
-    gemspec.summary = 'Asynchronous task library'
-    gemspec.description = 'Generic asynchronous task library'
-    gemspec.authors = ['Brad Pardee', 'Reid Morrison']
-    gemspec.email = ['bradpardee@gmail.com', 'rubywmq@gmail.com']
-    gemspec.homepage = 'http://github.com/ClarityServices/modern_times'
-    gemspec.add_dependency 'jruby-jms', ['>= 0.11.2']
-    gemspec.add_dependency 'jmx',  ['>= 0.6']
-    gemspec.add_dependency 'gene_pool'
-  end
+  require 'bundler/setup'
 rescue LoadError
-  puts 'Jeweler not available. Install it with: gem install jeweler'
+  puts 'You must `gem install bundler` and `bundle install` to run rake tasks'
 end
 
-desc "Run Test Suite"
-task :test do
-  Rake::TestTask.new(:functional) do |t|
-    t.test_files = FileList['test/*_test.rb']
-    t.verbose    = true
-  end
+require 'rake'
+require 'rdoc/task'
+require 'rake/testtask'
+require 'rake/clean'
 
-  Rake::Task['functional'].invoke
+desc "Build gem"
+task :gem  do |t|
+  system 'gem build modern_times.gemspec'
 end
+
+Rake::TestTask.new(:test) do |t|
+  t.libs << 'lib'
+  t.libs << 'test'
+  t.pattern = 'test/**/*_test.rb'
+  t.verbose = false
+end
+
+task :default => :test
+
+RDoc::Task.new(:rdoc) do |rdoc|
+  rdoc.rdoc_dir = 'rdoc'
+  rdoc.title    = 'ModernTimes'
+  rdoc.options << '--line-numbers' << '--inline-source'
+  rdoc.rdoc_files.include('README.md')
+  rdoc.rdoc_files.include('lib/**/*.rb')
+end
+
