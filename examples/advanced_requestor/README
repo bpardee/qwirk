@@ -12,4 +12,4 @@ rackup -p 4567
 jruby publish.rb foobar 4 2
 
 # Step 4
-# Play around with the options in modern_times.yml and repeat steps 2&3.
+# Play around with the options in qwirk.yml and repeat steps 2&3.

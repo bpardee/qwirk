@@ -1,10 +1,10 @@
-require 'modern_times'
+require 'qwirk'
 require 'shoulda'
 require 'test/unit'
 require 'fileutils'
 
 class DummyWorker
-  include ModernTimes::BaseWorker
+  include Qwirk::BaseWorker
   attr_reader :opts, :setup_called, :count
 
   @@mutex = Mutex.new
@@ -75,7 +75,7 @@ class BaseTest < Test::Unit::TestCase
       assert_equal('Dummy', @supervisor.name)
       assert_equal(2, @worker.index)
       assert_equal('dummy thread', @worker.thread)
-      assert_equal(ModernTimes::Base::Supervisor, @supervisor.class)
+      assert_equal(Qwirk::Base::Supervisor, @supervisor.class)
       assert_equal('dummy_manager', @supervisor.manager)
     end
   end
@@ -95,7 +95,7 @@ class BaseTest < Test::Unit::TestCase
     setup do
       DummyWorker.reset
       @start_time = Time.now
-      @manager = ModernTimes::Manager.new
+      @manager = Qwirk::Manager.new
       @manager.add(DummyWorker, 2, {:foo => 42})
       sleep 5
       @manager.stop
@@ -125,7 +125,7 @@ class BaseTest < Test::Unit::TestCase
   context 'a disallowed worker' do
     setup do
       DummyWorker.reset
-      @manager = ModernTimes::Manager.new(:domain => 'DisallowedWorker')
+      @manager = Qwirk::Manager.new(:domain => 'DisallowedWorker')
       @manager.allowed_workers = []
     end
 
@@ -145,7 +145,7 @@ class BaseTest < Test::Unit::TestCase
   context 'multiple workers' do
     setup do
       DummyWorker.reset
-      @manager = ModernTimes::Manager.new(:domain => 'AllowedWorker')
+      @manager = Qwirk::Manager.new(:domain => 'AllowedWorker')
       @manager.allowed_workers = [DummyWorker, Dummy2Worker]
       @manager.add(DummyWorker, 2, {:foo => 42})
       @manager.add(DummyWorker, 1, {:name => 'OtherDummy'})
@@ -176,8 +176,8 @@ class BaseTest < Test::Unit::TestCase
   context 'manager with persist_file set' do
     setup do
       DummyWorker.reset
-      persist_file = "/tmp/modern_times_persist_#{$$}.state"
-      @manager = ModernTimes::Manager.new(:domain => 'PersistManager', :persist_file => persist_file)
+      persist_file = "/tmp/qwirk_persist_#{$$}.state"
+      @manager = Qwirk::Manager.new(:domain => 'PersistManager', :persist_file => persist_file)
       @manager.allowed_workers = [DummyWorker, Dummy2Worker]
       @manager.add(DummyWorker, 2, {:foo => 42})
       @manager.add(DummyWorker, 1, {:name => 'OtherDummy'})
@@ -185,7 +185,7 @@ class BaseTest < Test::Unit::TestCase
       @manager.stop
       @manager.join
       DummyWorker.reset
-      @manager2 = ModernTimes::Manager.new(:domain => 'PersistManager2', :persist_file => persist_file)
+      @manager2 = Qwirk::Manager.new(:domain => 'PersistManager2', :persist_file => persist_file)
       sleep 5
       @manager2.stop
       @manager2.join
@@ -212,14 +212,14 @@ class BaseTest < Test::Unit::TestCase
   context 'manager' do
     setup do
       DummyWorker.reset
-      persist_file = "/tmp/modern_times_persist_#{$$}.state"
+      persist_file = "/tmp/qwirk_persist_#{$$}.state"
       @domain = 'JMXManagerDomain'
-      @manager = ModernTimes::Manager.new(:domain => @domain)
+      @manager = Qwirk::Manager.new(:domain => @domain)
       @manager.allowed_workers = [DummyWorker, Dummy2Worker]
 
       @server = JMX.simple_server
       @client = JMX.connect
-      @manager_mbean = @client[ModernTimes.manager_mbean_object_name(@domain)]
+      @manager_mbean = @client[Qwirk.manager_mbean_object_name(@domain)]
     end
 
     teardown do
@@ -235,9 +235,9 @@ class BaseTest < Test::Unit::TestCase
       #puts "allowed workers=#{@manager_mbean.allowed_workers[0].class.name}"
       assert_equal ['DummyWorker', 'Dummy2Worker'], @manager_mbean.allowed_workers.to_a
 
-      dummy_bean        = @client[ModernTimes.supervisor_mbean_object_name(@domain, 'Dummy')]
-      other_dummy_bean  = @client[ModernTimes.supervisor_mbean_object_name(@domain, 'OtherDummy')]
-      second_dummy_bean = @client[ModernTimes.supervisor_mbean_object_name(@domain, 'SecondDummy')]
+      dummy_bean        = @client[Qwirk.supervisor_mbean_object_name(@domain, 'Dummy')]
+      other_dummy_bean  = @client[Qwirk.supervisor_mbean_object_name(@domain, 'OtherDummy')]
+      second_dummy_bean = @client[Qwirk.supervisor_mbean_object_name(@domain, 'SecondDummy')]
       assert 2, dummy_bean.count
       assert 1, other_dummy_bean.count
       assert 2, second_dummy_bean.count

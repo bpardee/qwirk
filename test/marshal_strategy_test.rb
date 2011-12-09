@@ -1,7 +1,7 @@
 require 'rubygems'
 require 'test/unit'
 require 'shoulda'
-require 'modern_times'
+require 'qwirk'
 
 class Klass
   def initialize(str)
@@ -31,14 +31,14 @@ end
 class MarshalStrategyTest < Test::Unit::TestCase
   context '' do
     setup do
-      ModernTimes::MarshalStrategy.register(:spock => SpockMarshalStrategy)
+      Qwirk::MarshalStrategy.register(:spock => SpockMarshalStrategy)
 
-      @bson   = ModernTimes::MarshalStrategy.find(:bson)
-      @json   = ModernTimes::MarshalStrategy.find(:json)
-      @ruby   = ModernTimes::MarshalStrategy.find(:ruby)
-      @string = ModernTimes::MarshalStrategy.find(:string)
-      @yaml   = ModernTimes::MarshalStrategy.find(:yaml)
-      @spock  = ModernTimes::MarshalStrategy.find(:spock)
+      @bson   = Qwirk::MarshalStrategy.find(:bson)
+      @json   = Qwirk::MarshalStrategy.find(:json)
+      @ruby   = Qwirk::MarshalStrategy.find(:ruby)
+      @string = Qwirk::MarshalStrategy.find(:string)
+      @yaml   = Qwirk::MarshalStrategy.find(:yaml)
+      @spock  = Qwirk::MarshalStrategy.find(:spock)
     end
 
     should 'marshal and unmarshal correctly' do

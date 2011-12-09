@@ -1,13 +1,13 @@
-require 'modern_times'
+require 'qwirk'
 require 'rails'
 #require 'action_controller'
 #require 'application_helper'
 
-module ModernTimes
+module Qwirk
   class Engine < Rails::Engine
 
     # Config defaults
-    config.widget_factory_name = "Modern Times"
+    config.widget_factory_name = "Qwirk"
     config.mount_at = '/'
     
     # Load rake tasks

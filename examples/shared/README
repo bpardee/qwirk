@@ -7,14 +7,14 @@
 
 # Step 2
 # Start up the application
-rm -f modern_times.yml
+rm -f qwirk.yml
 rackup -p 4567
 
 # Step 3
 # Browse to http://localhost:4567
-# Open up the tree to ModernTimes => S1 => Attributes
+# Open up the tree to Qwirk => S1 => Attributes
 # Enter 2 for count and click the Update button.
-# Open up the tree to ModernTimes => S2 => Attributes
+# Open up the tree to Qwirk => S2 => Attributes
 # Enter 3 for count and click the Update button.
 # Refresh the browser so that you get the worker updates to the tree
 

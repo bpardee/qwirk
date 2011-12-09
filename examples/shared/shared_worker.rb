@@ -1,5 +1,5 @@
 class SharedWorker
-  include ModernTimes::Worker
+  include Qwirk::Worker
 
   config_accessor :sleep_time, :float, 'Number of seconds to sleep between messages', 5
 

@@ -3,7 +3,7 @@ $LOAD_PATH.unshift File.dirname(__FILE__) + '/../../lib'
 
 require 'rubygems'
 require 'erb'
-require 'modern_times'
+require 'qwirk'
 require 'yaml'
 require 'reverse_echo_worker'
 
@@ -18,8 +18,8 @@ $sleep_time  = (ARGV[2] || 2).to_i
 $sim_count   = (ARGV[3] || 1).to_i
 
 config = YAML.load(ERB.new(File.read(File.join(File.dirname(__FILE__), '..', 'jms.yml'))).result(binding))
-ModernTimes::JMS::Connection.init(config)
-$publisher = ModernTimes::JMS::Publisher.new(:queue_name => ReverseEchoWorker.default_name, :response_time_to_live => 10000, :marshal => :string)
+Qwirk::JMS::Connection.init(config)
+$publisher = Qwirk::JMS::Publisher.new(:queue_name => ReverseEchoWorker.default_name, :response_time_to_live => 10000, :marshal => :string)
 
 def make_request(ident='')
   puts "#{ident}Making request at #{Time.now.to_f}"

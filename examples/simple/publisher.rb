@@ -1,5 +1,5 @@
 require 'rumx'
-require 'modern_times'
+require 'qwirk'
 
 class Publisher
   include Rumx::Bean
@@ -19,8 +19,8 @@ class Publisher
       [ :sleep_time, :float,   'Time to sleep between messages',        0.5                ]
   ]
 
-  @@bar_publisher = ModernTimes::Publisher.new(:queue_name => 'Bar', :marshal => :bson)
-  @@baz_publisher = ModernTimes::Publisher.new(:queue_name => 'Baz', :marshal => :string)
+  @@bar_publisher = Qwirk::Publisher.new(:queue_name => 'Bar', :marshal => :bson)
+  @@baz_publisher = Qwirk::Publisher.new(:queue_name => 'Baz', :marshal => :string)
 
   def initialize
     @bar_count = 0

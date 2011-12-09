@@ -3,7 +3,7 @@ $LOAD_PATH.unshift File.dirname(__FILE__) + '/../../lib'
 
 require 'rubygems'
 require 'erb'
-require 'modern_times'
+require 'qwirk'
 require 'yaml'
 
 if ARGV.size < 1
@@ -16,8 +16,8 @@ timeout    = (ARGV[1] || 4).to_f
 sleep_time = (ARGV[2] || 2).to_f
 
 config = YAML.load(ERB.new(File.read(File.join(File.dirname(__FILE__), '..', 'jms.yml'))).result(binding))
-ModernTimes::JMS::Connection.init(config)
-publisher = ModernTimes::JMS::Publisher.new(:virtual_topic_name => 'test_string', :response => true, :marshal => :string)
+Qwirk::JMS::Connection.init(config)
+publisher = Qwirk::JMS::Publisher.new(:virtual_topic_name => 'test_string', :response => true, :marshal => :string)
 handle = publisher.publish(string)
 sleep sleep_time
 

@@ -1,4 +1,4 @@
-namespace :modern_times do
+namespace :qwirk do
   
   desc "example gem rake task"
   task :report => :environment do

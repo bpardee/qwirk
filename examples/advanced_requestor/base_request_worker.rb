@@ -1,5 +1,5 @@
 class BaseRequestWorker
-  include ModernTimes::JMS::RequestWorker
+  include Qwirk::JMS::RequestWorker
 
   config_accessor :sleep_time, :float, 'Number of seconds to sleep between messages', 0
 

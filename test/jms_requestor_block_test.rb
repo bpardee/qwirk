@@ -1,4 +1,4 @@
-require 'modern_times'
+require 'qwirk'
 require 'shoulda'
 require 'test/unit'
 require 'fileutils'
@@ -7,7 +7,7 @@ require 'erb'
 # NOTE: This test requires a running ActiveMQ server
 
 class BaseRequestWorker
-  include ModernTimes::JMS::RequestWorker
+  include Qwirk::JMS::RequestWorker
 
   def self.sleep_time=(val)
     @sleep_time = val
@@ -77,7 +77,7 @@ class TripleWorker < BaseRequestWorker
 end
 
 class HolderWorker
-  include ModernTimes::JMS::Worker
+  include Qwirk::JMS::Worker
   virtual_topic 'test_string'
 
   def self.my_obj
@@ -101,7 +101,7 @@ class JMSRequestorBlockTest < Test::Unit::TestCase
     assert_equal 1, hash.keys.size
     e = hash[expected_key]
 
-    assert e.kind_of?(ModernTimes::RemoteException)
+    assert e.kind_of?(Qwirk::RemoteException)
   end
 
   def make_call(publisher, string, timeout)
@@ -148,7 +148,7 @@ class JMSRequestorBlockTest < Test::Unit::TestCase
   context 'jms request with block' do
     setup do
       config = YAML.load(ERB.new(File.read(File.join(File.dirname(__FILE__), 'jms.yml'))).result(binding))
-      ModernTimes::JMS::Connection.init(config)
+      Qwirk::JMS::Connection.init(config)
     end
 
     teardown do
@@ -156,7 +156,7 @@ class JMSRequestorBlockTest < Test::Unit::TestCase
 
     context "real publishing" do
       setup do
-        @manager = ModernTimes::Manager.new
+        @manager = Qwirk::Manager.new
 
         @manager.add(CharCountWorker, 1)
         @manager.add(CharCountWorker, 1, :name => 'CharCount2')
@@ -178,7 +178,7 @@ class JMSRequestorBlockTest < Test::Unit::TestCase
 
       should "handle replies" do
 
-        publisher = ModernTimes::JMS::Publisher.new(:virtual_topic_name => 'test_string', :response_time_to_live => 10000, :marshal => :string)
+        publisher = Qwirk::JMS::Publisher.new(:virtual_topic_name => 'test_string', :response_time_to_live => 10000, :marshal => :string)
         cc_val = {'f' => 1, 'o' => 4, 'b' => 1}
 
         hash = make_call(publisher, 'fooboo', 2)
@@ -228,16 +228,16 @@ class JMSRequestorBlockTest < Test::Unit::TestCase
             TripleWorker.new,
             HolderWorker.new,
         ]
-        ModernTimes::JMS::Publisher.setup_dummy_publishing(workers)
+        Qwirk::JMS::Publisher.setup_dummy_publishing(workers)
       end
 
       teardown do
-        ModernTimes::JMS::Publisher.clear_dummy_publishing
+        Qwirk::JMS::Publisher.clear_dummy_publishing
       end
 
       should "handle replies" do
 
-        publisher = ModernTimes::JMS::Publisher.new(:virtual_topic_name => 'test_string', :response => true, :marshal => :string)
+        publisher = Qwirk::JMS::Publisher.new(:virtual_topic_name => 'test_string', :response => true, :marshal => :string)
         cc_val = {'f' => 1, 'o' => 4, 'b' => 1}
 
         hash = make_call(publisher, 'fooboo', 2)

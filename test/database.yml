@@ -1,6 +1,6 @@
 mysql:
   adapter: mysql
-  database: modern_times_test
+  database: qwirk_test
   username: root
   password:
   host: 127.0.0.1

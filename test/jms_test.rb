@@ -1,4 +1,4 @@
-require 'modern_times'
+require 'qwirk'
 require 'shoulda'
 require 'test/unit'
 require 'fileutils'
@@ -97,37 +97,37 @@ module StringTest
 end
 
 class DefaultWorker
-  include ModernTimes::JMS::Worker
+  include Qwirk::JMS::Worker
   include WorkerHelper
 end
 
 module Dummy
   class DefaultWorker
-    include ModernTimes::JMS::Worker
+    include Qwirk::JMS::Worker
     include WorkerHelper
   end
 end
 
 class SpecifiedQueueWorker
-  include ModernTimes::JMS::Worker
+  include Qwirk::JMS::Worker
   queue 'MyQueueName'
   include WorkerHelper
 end
 
 class SpecifiedQueue2Worker
-  include ModernTimes::JMS::Worker
+  include Qwirk::JMS::Worker
   queue 'MyQueueName'
   include WorkerHelper
 end
 
 class SpecifiedTopicWorker
-  include ModernTimes::JMS::Worker
+  include Qwirk::JMS::Worker
   virtual_topic 'MyTopicName'
   include WorkerHelper
 end
 
 class SpecifiedTopic2Worker
-  include ModernTimes::JMS::Worker
+  include Qwirk::JMS::Worker
   virtual_topic 'MyTopicName'
   include WorkerHelper
 end
@@ -138,7 +138,7 @@ class JMSTest < Test::Unit::TestCase
   @@client = JMX.connect
 
   def publish(marshal, tester, range, options)
-    publisher = ModernTimes::JMS::Publisher.new(options.merge(:marshal => marshal))
+    publisher = Qwirk::JMS::Publisher.new(options.merge(:marshal => marshal))
     puts "Publishing #{range} to #{publisher} via #{marshal}"
     range.each do |i|
       obj = tester.create_obj(i)
@@ -168,7 +168,7 @@ class JMSTest < Test::Unit::TestCase
     if domain
       total_count = 0
       names.each do |name|
-        bean = @@client[ModernTimes.supervisor_mbean_object_name(domain, name)]
+        bean = @@client[Qwirk.supervisor_mbean_object_name(domain, name)]
         bean.message_counts.each do |msg_count|
           total_count += msg_count
           assert msg_count >= min, "#{msg_count} is not between #{min} and #{max}"
@@ -182,7 +182,7 @@ class JMSTest < Test::Unit::TestCase
   context 'jms' do
     setup do
       config = YAML.load(ERB.new(File.read(File.join(File.dirname(__FILE__), 'jms.yml'))).result(binding))
-      ModernTimes::JMS::Connection.init(config)
+      Qwirk::JMS::Connection.init(config)
     end
 
     teardown do
@@ -199,7 +199,7 @@ class JMSTest < Test::Unit::TestCase
       context "marshaling with #{marshal}" do
         setup do
           @domain = "Uniquize_#{marshal}"
-          @manager = ModernTimes::Manager.new(:domain => @domain)
+          @manager = Qwirk::Manager.new(:domain => @domain)
         end
 
         teardown do
@@ -257,11 +257,11 @@ class JMSTest < Test::Unit::TestCase
           SpecifiedTopicWorker.new(:tester => RubyTest, :name => 'SpecifiedTopicClone'),
           SpecifiedTopic2Worker.new(:tester => RubyTest),
         ]
-        ModernTimes::JMS::Publisher.setup_dummy_publishing(workers)
+        Qwirk::JMS::Publisher.setup_dummy_publishing(workers)
       end
 
       teardown do
-        ModernTimes::JMS::Publisher.clear_dummy_publishing
+        Qwirk::JMS::Publisher.clear_dummy_publishing
       end
 
       should "directly call applicable workers" do

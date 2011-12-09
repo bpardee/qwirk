@@ -1,5 +1,5 @@
 class PrintWorker
-  include ModernTimes::JMS::Worker
+  include Qwirk::JMS::Worker
 
   topic 'test_string'
 

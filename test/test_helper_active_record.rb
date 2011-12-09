@@ -26,7 +26,7 @@ def load_schema
   ActiveRecord::Base.establish_connection( config['mysql'] )
   ActiveRecord::Base.connection()
   
-  load(File.dirname(__FILE__) + "/../lib/rails/generators/modern_times/templates/schema.rb")
+  load(File.dirname(__FILE__) + "/../lib/rails/generators/qwirk/templates/schema.rb")
 
   @@fixtures = {}
   
@@ -57,5 +57,5 @@ def load_fixture( table )
 
 end
 
-ModernTimes::Batch::FileWorker.default_file_status_strategy = :active_record
+Qwirk::Batch::FileWorker.default_file_status_strategy = :active_record
 load_schema

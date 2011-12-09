@@ -1,4 +1,4 @@
-require 'modern_times'
+require 'qwirk'
 require 'shoulda'
 require 'test/unit'
 require 'fileutils'
@@ -75,7 +75,7 @@ module StringTest
 end
 
 class DefaultWorker
-  include ModernTimes::JMS::RequestWorker
+  include Qwirk::JMS::RequestWorker
   response :marshal => :yaml
 
   def request(obj)
@@ -84,7 +84,7 @@ class DefaultWorker
 end
 
 class SleepWorker
-  include ModernTimes::JMS::RequestWorker
+  include Qwirk::JMS::RequestWorker
   response :marshal => :string
 
   def request(i)
@@ -101,7 +101,7 @@ class JMSRequestorTest < Test::Unit::TestCase
   context 'jms request' do
     setup do
       config = YAML.load(ERB.new(File.read(File.join(File.dirname(__FILE__), 'jms.yml'))).result(binding))
-      ModernTimes::JMS::Connection.init(config)
+      Qwirk::JMS::Connection.init(config)
     end
 
     teardown do
@@ -118,7 +118,7 @@ class JMSRequestorTest < Test::Unit::TestCase
       context "marshaling with #{marshal}" do
         setup do
           @domain = "Uniquize_#{marshal}"
-          @manager = ModernTimes::Manager.new(:domain => @domain)
+          @manager = Qwirk::Manager.new(:domain => @domain)
         end
 
         teardown do
@@ -134,7 +134,7 @@ class JMSRequestorTest < Test::Unit::TestCase
 
           sleep 1
 
-          publisher = ModernTimes::JMS::Publisher.new(:queue_name => 'Default', :marshal => marshal, :response_time_to_live => 10000)
+          publisher = Qwirk::JMS::Publisher.new(:queue_name => 'Default', :marshal => marshal, :response_time_to_live => 10000)
           threads = []
           start = Time.now
           (0..9).each do |i|
@@ -157,11 +157,11 @@ class JMSRequestorTest < Test::Unit::TestCase
 
     context 'timed requesting' do
       setup do
-        @domain = "TimedModernTimes"
-        @manager = ModernTimes::Manager.new(:domain => @domain)
+        @domain = "TimedQwirk"
+        @manager = Qwirk::Manager.new(:domain => @domain)
         @manager.add(SleepWorker, 10)
         sleep 1
-        @publisher = ModernTimes::JMS::Publisher.new(:queue_name => 'Sleep', :marshal => :string, :response_time_to_live => 10000)
+        @publisher = Qwirk::JMS::Publisher.new(:queue_name => 'Sleep', :marshal => :string, :response_time_to_live => 10000)
       end
 
       teardown do
@@ -196,7 +196,7 @@ class JMSRequestorTest < Test::Unit::TestCase
           end
           threads.each {|t| t.join}
           total_time = Time.now - start_time
-          bean = @@client[ModernTimes.supervisor_mbean_object_name(@domain, 'Sleep')]
+          bean = @@client[Qwirk.supervisor_mbean_object_name(@domain, 'Sleep')]
           bean_avg = bean.average_response_time
           bean_min = bean.min_response_time
           bean_max = bean.max_response_time
@@ -217,17 +217,17 @@ class JMSRequestorTest < Test::Unit::TestCase
         workers = [
           DefaultWorker.new(:tester => @tester)
         ]
-        ModernTimes::JMS::Publisher.setup_dummy_publishing(workers)
+        Qwirk::JMS::Publisher.setup_dummy_publishing(workers)
       end
 
       teardown do
-        ModernTimes::JMS::Publisher.clear_dummy_publishing
+        Qwirk::JMS::Publisher.clear_dummy_publishing
       end
 
       should "directly call applicable workers" do
         x=9999
         obj = @tester.create_obj(x)
-        publisher = ModernTimes::JMS::Publisher.new(:queue_name => 'Default', :marshal => :ruby, :response => true)
+        publisher = Qwirk::JMS::Publisher.new(:queue_name => 'Default', :marshal => :ruby, :response => true)
         handle = publisher.publish(obj)
         reply_obj = handle.read_response(2)
         val = @tester.parse_obj(reply_obj)

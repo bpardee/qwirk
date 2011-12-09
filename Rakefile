@@ -13,7 +13,7 @@ require 'rake/clean'
 
 desc "Build gem"
 task :gem  do |t|
-  system 'gem build modern_times.gemspec'
+  system 'gem build qwirk.gemspec'
 end
 
 Rake::TestTask.new(:test) do |t|
@@ -27,7 +27,7 @@ task :default => :test
 
 RDoc::Task.new(:rdoc) do |rdoc|
   rdoc.rdoc_dir = 'rdoc'
-  rdoc.title    = 'ModernTimes'
+  rdoc.title    = 'Qwirk'
   rdoc.options << '--line-numbers' << '--inline-source'
   rdoc.rdoc_files.include('README.md')
   rdoc.rdoc_files.include('lib/**/*.rb')
