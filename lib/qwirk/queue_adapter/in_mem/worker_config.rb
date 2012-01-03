@@ -15,6 +15,8 @@ module Qwirk
 
         def initialize(parent, queue_name, topic_name, options, response_options)
           @parent = parent
+          @queue_name = queue_name
+          @topic_name = topic_name
           @queue_max_size = options[:queue_max_size] || 100
           @queue = Factory.get_worker_queue(parent.name, queue_name, topic_name, @queue_max_size)
         end
@@ -24,7 +26,7 @@ module Qwirk
         end
 
         def create_worker
-          Worker.new(@parent.marshaler, @queue)
+          Worker.new(@parent.marshaler, @queue, @queue_name, @topic_name)
         end
 
         def stop

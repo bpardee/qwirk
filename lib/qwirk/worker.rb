@@ -32,8 +32,8 @@ module Qwirk
   module Worker
     include Qwirk::BaseWorker
 
-    attr_accessor :message, :adapter
-    attr_reader   :status
+    attr_accessor :message
+    attr_reader   :status, :adapter
 
     module ClassMethods
       def queue(name, opts={})
@@ -118,7 +118,7 @@ module Qwirk
       @ok_to_read           = false
       self.index  = index
       self.config = worker_config
-      self.adapter = worker_config.adapter.create_worker
+      @adapter = worker_config.adapter.create_worker
       self.thread = Thread.new do
         java.lang.Thread.current_thread.name = "Qwirk worker: #{self}"
         #Qwirk.logger.debug "#{worker}: Started thread with priority #{Thread.current.priority}"

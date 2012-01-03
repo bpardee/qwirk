@@ -1,5 +1,5 @@
 class ReverseEchoWorker
-  include Qwirk::JMS::RequestWorker
+  include Qwirk::RequestWorker
   
   def request(obj)
     puts "#{self}: Received #{obj} at #{Time.now}"

@@ -83,8 +83,12 @@ module Qwirk
           hash = {}
           # Only store off the config values that are specifically different from default values or values set in the workers.yml file
           # Then updates to these values will be allowed w/o being hardcoded to an old default value.
-          worker_config.bean_get_attributes do |attribute, value, rel_path, param_name|
-            hash[param_name.to_sym] = value if attribute[:config_item] && static_options[param_name.to_sym] != value
+          worker_config.bean_get_attributes do |attribute_info|
+            if attribute_info.attribute[:config_item] && attribute_info.ancestry.size == 1
+              param_name = attribute_info.ancestry[0].to_sym
+              value = attribute_info.value
+              hash[param_name] = value if static_options[param_name] != value
+            end
           end
           new_persist_options[config_name] = hash unless hash.empty?
         end

@@ -27,7 +27,7 @@ module Qwirk
       rescue Exception => e
         on_exception(e)
       else
-        config.adapter.send_response(message, config.marshal(response))
+        adapter.send_response(message, config.marshaler.marshal(response))
       end
       post_request(object)
     rescue Exception => e

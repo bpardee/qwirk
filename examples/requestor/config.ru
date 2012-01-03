@@ -1,16 +1,14 @@
-# Allow examples to be run in-place without requiring a gem install
-$LOAD_PATH.unshift File.dirname(__FILE__) + '/../../lib'
+require '../setup'
+require './reverse_echo_worker'
+require './requestor'
 
-require 'rubygems'
-require 'erb'
-require 'qwirk'
-require 'yaml'
-require 'reverse_echo_worker'
-
-config = YAML.load(ERB.new(File.read(File.join(File.dirname(__FILE__), '..', 'jms.yml'))).result(binding))
-Qwirk::JMS::Connection.init(config)
-
-manager = Qwirk::Manager.new
-manager.stop_on_signal(join=true)
-manager['ReverseEcho'].count = 1
+# If we're not starting up a standalone requestor, then start up a manager
+if ENV['RACK_ENV'] != 'requestor'
+  manager = Qwirk::Manager.new(:name => 'Worker', :persist_file => 'qwirk.yml')
+  manager['ReverseEcho'].max_count = 1
+  at_exit { manager.stop }
+end
+if ENV['RACK_ENV'] != 'worker'
+  Rumx::Bean.root.bean_add_child(:Requestor, Requestor.new)
+end
 run Rumx::Server

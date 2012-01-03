@@ -51,7 +51,7 @@ module Qwirk
     #
     def read_response(timeout, &block)
       raise "Invalid call to read_response for #{@publisher}, not setup for responding" unless @publisher.response_options
-      @publisher.adapter.with_response(message_id) do |consumer|
+      @publisher.adapter.with_response(@message_id) do |consumer|
         if block_given?
           return read_multiple_response(consumer, timeout, &block)
         else

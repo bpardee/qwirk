@@ -20,7 +20,9 @@ module Qwirk
         end
 
         def write_response(obj, worker_name)
+          puts "#{self.inspect} writing #{obj} from #{worker_name}"
           @mutex.synchronize do
+            puts "#{self.inspect} writing2 #{obj} from #{worker_name}"
             @array << [obj, worker_name]
             @read_condition.signal
             return

@@ -5,9 +5,11 @@ module Qwirk
       class Worker
         attr_reader :stopped
 
-        def initialize(marshaler, queue)
-          @marshaler = marshaler
-          @queue     = queue
+        def initialize(marshaler, queue, queue_name, topic_name)
+          @marshaler  = marshaler
+          @queue      = queue
+          @queue_name = queue_name
+          @topic_name = topic_name
         end
 
         def receive_message
@@ -19,12 +21,12 @@ module Qwirk
 
         def send_response(original_message, marshaled_object)
           # We unmarshal so our workers get consistent messages regardless of the adapter
-          do_send_response(original_message, @marshaler.unmarshal(marshaled_object))
+          do_send_response(@marshaler.unmarshal(marshaled_object))
         end
 
         def send_exception(original_message, e)
           # TODO: I think exceptions should be recreated fully so no need for marshal/unmarshal?
-          do_send_response(original_message, Qwirk::RemoteException.new(e))
+          do_send_response(Qwirk::RemoteException.new(e))
         end
 
         def message_to_object(msg)
@@ -51,8 +53,10 @@ module Qwirk
         private
 
         def do_send_response(object)
-          return unless @queue.reply_queue
-          @queue.reply_queue.write_response(object, config.name)
+          reply_queue = Factory.find_reply_queue(@queue_name, @topic_name, object.object_id)
+          puts "reply_queue=#{reply_queue}"
+          return unless reply_queue
+          reply_queue.write_response(object, config.name)
           return true
         end
       end
