@@ -26,7 +26,7 @@ module Qwirk
         end
 
         def create_worker
-          Worker.new(@parent.marshaler, @queue, @queue_name, @topic_name)
+          Worker.new(@parent.name, @parent.marshaler, @queue, @queue_name, @topic_name)
         end
 
         def stop
