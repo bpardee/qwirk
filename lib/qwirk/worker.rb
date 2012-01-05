@@ -48,7 +48,7 @@ module Qwirk
 
       def topic(name, options={})
         @topic_name = name.to_s
-        @queue_options = opts
+        @queue_options = options
       end
 
       # Set the fail_queue
@@ -73,8 +73,9 @@ module Qwirk
       end
 
       def queue_name(default_name)
+        puts "getting queue_name queue=#{@queue_name} topic=#{@topic_name} default=#{default_name}"
         return @queue_name if @queue_name
-        return nil if @otopic_name
+        return nil if @topic_name
         return default_name
       end
 

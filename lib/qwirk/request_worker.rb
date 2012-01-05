@@ -49,7 +49,7 @@ module Qwirk
 
     def on_exception(e)
       begin
-        config.adapter.send_exception(e)
+        adapter.send_exception(message, e)
       rescue Exception => e
         Qwirk.logger.error("Exception in exception reply: #{e.message}")
         log_backtrace(e)

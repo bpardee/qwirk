@@ -65,7 +65,7 @@ module Qwirk
       @read_mutex.synchronize do
         if new_max_count > 0
           Qwirk.logger.info "#{@worker_class.name}: Changing max number of workers from #{@max_count} to #{new_max_count}"
-          @timer ||= Rumx::Beans::Timer.new
+          @timer ||= Rumx::Beans::TimerAndError.new
           if !@gene_pool
             @gene_pool = GenePool.new(:name         => "#{@manager.name}: #{@name}",
                                       :pool_size    => new_max_count,
