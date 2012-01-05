@@ -18,6 +18,8 @@ Currently tested only for ActiveMQ
 
 ## Rails Usage:
 
+TODO: This stuff is all obsolete modern_times documentation.  Look at the examples for usage information.
+
 Create config/jms.yml which might look as follows:
 
     development_server: &defaults
