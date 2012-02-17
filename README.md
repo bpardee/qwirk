@@ -98,7 +98,7 @@ examples for registering marshal strategies):
 
     Qwirk.init_rails
     # Publishers can be defined wherever appropriate, probably as class variables within the class that uses it
-    $foo_publisher = Qwirk::JMS::Publisher.new('Foo')
+    $foo_publisher = Qwirk::QueueAdapter::JMS::Publisher.new('Foo')
 
 When creating publishers, you will probably want to store the value in a class variable.  Publishers internally
 make use of a session pool for communicating with the JMS server so you wouldn't want to create a new connection
@@ -111,7 +111,7 @@ In your code, queue foo objects:
 In app/workers, create a FooWorker class:
 
     class FooWorker
-      include Qwirk::JMS::Worker
+      include Qwirk::QueueAdapter::JMS::Worker
       def perform(my_foo_object)
         # Operate on my_foo_object
       end
@@ -137,7 +137,7 @@ receives all messages instead of a group of workers (threads) collectively recei
 problem). For instance, suppose you have the following workers:
 
     class FooWorker
-      include Qwirk::JMS::Worker
+      include Qwirk::QueueAdapter::JMS::Worker
       virtual_topic 'inquiry'
 
       def perform(my_inquiry)
@@ -146,7 +146,7 @@ problem). For instance, suppose you have the following workers:
     end
 
     class BarWorker
-      include Qwirk::JMS::Worker
+      include Qwirk::QueueAdapter::JMS::Worker
       virtual_topic 'inquiry'
 
       def perform(my_inquiry)
@@ -156,7 +156,7 @@ problem). For instance, suppose you have the following workers:
 
 Then you can create a publisher where messages are delivered to both workers:
 
-    @@publisher = Qwirk::JMS::Publisher.new(:virtual_topic_name => 'inquiry')
+    @@publisher = Qwirk::QueueAdapter::JMS::Publisher.new(:virtual_topic_name => 'inquiry')
     ...
     @@publisher.publish(my_inquiry)
 

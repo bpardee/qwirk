@@ -75,7 +75,7 @@ module StringTest
 end
 
 class DefaultWorker
-  include Qwirk::JMS::RequestWorker
+  include Qwirk::QueueAdapter::JMS::RequestWorker
   response :marshal => :yaml
 
   def request(obj)
@@ -84,7 +84,7 @@ class DefaultWorker
 end
 
 class SleepWorker
-  include Qwirk::JMS::RequestWorker
+  include Qwirk::QueueAdapter::JMS::RequestWorker
   response :marshal => :string
 
   def request(i)
@@ -101,7 +101,7 @@ class JMSRequestorTest < Test::Unit::TestCase
   context 'jms request' do
     setup do
       config = YAML.load(ERB.new(File.read(File.join(File.dirname(__FILE__), 'jms.yml'))).result(binding))
-      Qwirk::JMS::Connection.init(config)
+      Qwirk::QueueAdapter::JMS::Connection.init(config)
     end
 
     teardown do
@@ -134,7 +134,7 @@ class JMSRequestorTest < Test::Unit::TestCase
 
           sleep 1
 
-          publisher = Qwirk::JMS::Publisher.new(:queue_name => 'Default', :marshal => marshal, :response_time_to_live => 10000)
+          publisher = Qwirk::QueueAdapter::JMS::Publisher.new(:queue_name => 'Default', :marshal => marshal, :response_time_to_live => 10000)
           threads = []
           start = Time.now
           (0..9).each do |i|
@@ -161,7 +161,7 @@ class JMSRequestorTest < Test::Unit::TestCase
         @manager = Qwirk::Manager.new(:domain => @domain)
         @manager.add(SleepWorker, 10)
         sleep 1
-        @publisher = Qwirk::JMS::Publisher.new(:queue_name => 'Sleep', :marshal => :string, :response_time_to_live => 10000)
+        @publisher = Qwirk::QueueAdapter::JMS::Publisher.new(:queue_name => 'Sleep', :marshal => :string, :response_time_to_live => 10000)
       end
 
       teardown do
@@ -217,17 +217,17 @@ class JMSRequestorTest < Test::Unit::TestCase
         workers = [
           DefaultWorker.new(:tester => @tester)
         ]
-        Qwirk::JMS::Publisher.setup_dummy_publishing(workers)
+        Qwirk::QueueAdapter::JMS::Publisher.setup_dummy_publishing(workers)
       end
 
       teardown do
-        Qwirk::JMS::Publisher.clear_dummy_publishing
+        Qwirk::QueueAdapter::JMS::Publisher.clear_dummy_publishing
       end
 
       should "directly call applicable workers" do
         x=9999
         obj = @tester.create_obj(x)
-        publisher = Qwirk::JMS::Publisher.new(:queue_name => 'Default', :marshal => :ruby, :response => true)
+        publisher = Qwirk::QueueAdapter::JMS::Publisher.new(:queue_name => 'Default', :marshal => :ruby, :response => true)
         handle = publisher.publish(obj)
         reply_obj = handle.read_response(2)
         val = @tester.parse_obj(reply_obj)

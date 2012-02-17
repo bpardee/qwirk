@@ -16,7 +16,7 @@
 * Set count to 100 and sleep\_time to 0.2 and click Execute.
 * Click back on Worker => Bar => Attributes and continue clicking every few seconds.  You
   should see the count of workers top out at around 25 (5 published messages/sec * 5 secs/worker)
-  and then after all 100 messages have been read it will drop back down to 1.
+  and then 10 seconds after all 100 messages have been read it will drop back down to 1.
 
 ## Step 4
 * cntl-c the rackup process and start it back up.  It should come back with

@@ -13,7 +13,7 @@ require 'logger'
 jms_file = File.expand_path('../jms.yml', __FILE__)
 if File.exist?(jms_file)
   config = YAML.load(ERB.new(File.read(jms_file)).result(binding))
-  Qwirk::JMS::Connection.init(config)
+  Qwirk::QueueAdapter::JMS::Connection.init(config)
   Qwirk::QueueAdapter.set(:jms)
 else
   Qwirk::QueueAdapter.set(:in_mem)

@@ -1,7 +1,7 @@
 module Qwirk
   module Batch
 
-    # Batch worker which reads records from files and queues them up for a separate worker (Qwirk::JMS::RequestWorker) to process.
+    # Batch worker which reads records from files and queues them up for a separate worker (Qwirk::QueueAdapter::JMS::RequestWorker) to process.
     # For instance, a worker of this type might look as follows:
     #   class MyBatchWorker
     #     include Qwirk::Batch::FileWorker
@@ -204,18 +204,18 @@ module Qwirk
       #######
 
       def reply_event_loop
-        @reply_session = Qwirk::JMS::Connection.create_session
+        @reply_session = Qwirk::QueueAdapter::JMS::Connection.create_session
         @consumer = @reply_session.consumer(:queue_name => @queue_name)
         @reply_session.start
 
         while !@stopped && message = @consumer.receive
           @message_mutex.synchronize do
-            obj = Qwirk::JMS.parse_response(message)
+            obj = Qwirk::QueueAdapter::JMS.parse_response(message)
             process_response(obj)
             message.acknowledge
           end
           # TODO: @time_track now in WorkerConfig
-          #Qwirk.logger.info {"#{self}::on_message (#{('%.1f' % (@time_track.last_time*1000.0))}ms)"} if Qwirk::JMS::Connection.log_times?
+          #Qwirk.logger.info {"#{self}::on_message (#{('%.1f' % (@time_track.last_time*1000.0))}ms)"} if Qwirk::QueueAdapter::JMS::Connection.log_times?
         end
         @status = 'Exited'
         Qwirk.logger.info "#{self}: Exiting"

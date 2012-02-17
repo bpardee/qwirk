@@ -4,7 +4,7 @@ module Qwirk
     module JMS
       class Worker
         def initialize(worker_config)
-          @parent_worker_config = parent_worker_config
+          @worker_config = worker_config
           @session = Connection.create_session
           @consumer = @session.consumer(@worker_config.destination)
           @session.start
@@ -43,7 +43,7 @@ module Qwirk
 
         def close
           return if @closed
-          Qwirk.logger.info "Closing #{self.name}"
+          Qwirk.logger.info "Closing JMS worker #{@worker_config.parent.name}"
           # Don't clobber the session before a reply
           @consumer.close if @consumer
           @session.close if @session
@@ -66,7 +66,7 @@ module Qwirk
               # The reply is persistent if we explicitly set it or if we don't expire
               producer.delivery_mode_sym = persistent ? :persistent : :non_persistent
               producer.time_to_live = time_to_live.to_i if time_to_live
-              reply_message = Qwirk::JMS.create_message(session, marshaled_object, marshal_type)
+              reply_message = Qwirk::QueueAdapter::JMS.create_message(session, marshaled_object, marshal_type)
               reply_message.jms_correlation_id = original_message.jms_message_id
               reply_message['mt:marshal'] = marshal_type.to_s
               reply_message['mt:worker']  = config.name

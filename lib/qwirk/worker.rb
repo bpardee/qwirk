@@ -3,7 +3,7 @@ module Qwirk
   # Base Worker Class for any class that will be processing messages from topics or queues
   # By default, it will consume messages from a queue with the class name minus the Worker postfix.
   # For example, the queue call is unnecessary as it will default to a value of 'Foo' anyways:
-  #  class FooWorker < Qwirk::JMS::Worker
+  #  class FooWorker < Qwirk::QueueAdapter::JMS::Worker
   #    queue 'Foo'
   #    def perform(obj)
   #      # Perform work on obj
@@ -12,7 +12,7 @@ module Qwirk
   #
   # A topic can be specified using virtual_topic as follows (ActiveMQ only).  Multiple separate workers can
   # subscribe to the same topic (under ActiveMQ - see http://activemq.apache.org/virtual-destinations.html):
-  #  class FooWorker < Qwirk::JMS::Worker
+  #  class FooWorker < Qwirk::QueueAdapter::JMS::Worker
   #    virtual_topic 'Zulu'
   #    def perform(obj)
   #      # Perform work on obj
@@ -21,7 +21,7 @@ module Qwirk
   #
   # TODO (maybe):
   # Filters can also be specified within the class:
-  #  class FooWorker < Qwirk::JMS::Worker
+  #  class FooWorker < Qwirk::QueueAdapter::JMS::Worker
   #    filter 'age > 30'
   #    def perform(obj)
   #      # Perform work on obj
@@ -182,6 +182,7 @@ module Qwirk
         @read_mutex.synchronize do
           #puts "#{self}: Waiting for next available read"
           @read_condition.wait(@read_mutex) unless @stopped || @ok_to_read
+
           #puts "#{self}: Done waiting for next available read"
           if !@stopped && @ok_to_read
             @ok_to_read = false
@@ -197,8 +198,10 @@ module Qwirk
                 end
               end
               config.message_processing_complete(self)
-              Qwirk.logger.info {"#{self}::on_message (#{'%.1f' % delta}ms)"} if Qwirk::JMS::Connection.log_times?
+              Qwirk.logger.info {"#{self}::on_message (#{'%.1f' % delta}ms)"} if Qwirk::QueueAdapter::JMS::Connection.log_times?
               Qwirk.logger.flush if Qwirk.logger.respond_to?(:flush)
+            else
+              config.message_processing_complete(self)
             end
           end
         end

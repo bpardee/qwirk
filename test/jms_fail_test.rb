@@ -7,7 +7,7 @@ require 'erb'
 # NOTE: This test requires a running ActiveMQ server
 
 class ExceptionWorker
-  include Qwirk::JMS::Worker
+  include Qwirk::QueueAdapter::JMS::Worker
   def perform(obj)
     puts "#{name} received #{obj} but raising exception"
     raise 'foobar'
@@ -18,7 +18,7 @@ class ExceptionWorker
 end
 
 class ExceptionRequestWorker
-  include Qwirk::JMS::RequestWorker
+  include Qwirk::QueueAdapter::JMS::RequestWorker
 
   def request(obj)
     puts "#{name} received #{obj} but raising exception"
@@ -31,7 +31,7 @@ end
 
 # This will read from the queue that ExceptionWorker fails to
 class ExceptionFailWorker
-  include Qwirk::JMS::Worker
+  include Qwirk::QueueAdapter::JMS::Worker
 
   @@my_hash = {}
 
@@ -49,7 +49,7 @@ class JMSFailTest < Test::Unit::TestCase
 
   def assert_fail_queue(queue_name, fail_queue_name, value, is_fail_queue_expected)
     # Publish to Exception that will throw exception which will put on ExceptionFail queue
-    publisher = Qwirk::JMS::Publisher.new(:queue_name => queue_name, :marshal => :string)
+    publisher = Qwirk::QueueAdapter::JMS::Publisher.new(:queue_name => queue_name, :marshal => :string)
     puts "Publishing #{value} to #{queue_name}"
     publisher.publish(value)
     sleep 1
@@ -60,7 +60,7 @@ class JMSFailTest < Test::Unit::TestCase
   context 'jms' do
     setup do
       config = YAML.load(ERB.new(File.read(File.join(File.dirname(__FILE__), 'jms.yml'))).result(binding))
-      Qwirk::JMS::Connection.init(config)
+      Qwirk::QueueAdapter::JMS::Connection.init(config)
     end
 
     teardown do

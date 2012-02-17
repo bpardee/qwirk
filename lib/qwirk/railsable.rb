@@ -8,13 +8,13 @@ module Qwirk
       @env = ENV['MODERN_TIMES_ENV'] || Rails.env
       if @config = YAML.load(ERB.new(File.read(File.join(Rails.root, "config", "jms.yml"))).result(binding))[@env]
         Qwirk.logger.info "Messaging Enabled"
-        Qwirk::JMS::Connection.init(@config)
+        Qwirk::QueueAdapter::JMS::Connection.init(@config)
         @is_jms_enabled = true
 
         # Need to start the JMS Server in this VM
         # TODO: Still want to support this?
         if false
-        #if Qwirk::JMS::Connection.invm?
+        #if Qwirk::QueueAdapter::JMS::Connection.invm?
           @server = ::JMS::Server.create_server('vm://127.0.0.1')
           @server.start
           # Handle messages within this process
@@ -45,7 +45,7 @@ module Qwirk
             end
           end
         end
-        Qwirk::JMS::Publisher.setup_dummy_publishing(worker_pools)
+        Qwirk::QueueAdapter::JMS::Publisher.setup_dummy_publishing(worker_pools)
       end
     end
 

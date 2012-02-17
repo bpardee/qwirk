@@ -7,7 +7,7 @@ require 'erb'
 # NOTE: This test requires a running ActiveMQ server
 
 class BaseRequestWorker
-  include Qwirk::JMS::RequestWorker
+  include Qwirk::QueueAdapter::JMS::RequestWorker
 
   def self.sleep_time=(val)
     @sleep_time = val
@@ -77,7 +77,7 @@ class TripleWorker < BaseRequestWorker
 end
 
 class HolderWorker
-  include Qwirk::JMS::Worker
+  include Qwirk::QueueAdapter::JMS::Worker
   virtual_topic 'test_string'
 
   def self.my_obj
@@ -148,7 +148,7 @@ class JMSRequestorBlockTest < Test::Unit::TestCase
   context 'jms request with block' do
     setup do
       config = YAML.load(ERB.new(File.read(File.join(File.dirname(__FILE__), 'jms.yml'))).result(binding))
-      Qwirk::JMS::Connection.init(config)
+      Qwirk::QueueAdapter::JMS::Connection.init(config)
     end
 
     teardown do
@@ -178,7 +178,7 @@ class JMSRequestorBlockTest < Test::Unit::TestCase
 
       should "handle replies" do
 
-        publisher = Qwirk::JMS::Publisher.new(:virtual_topic_name => 'test_string', :response_time_to_live => 10000, :marshal => :string)
+        publisher = Qwirk::QueueAdapter::JMS::Publisher.new(:virtual_topic_name => 'test_string', :response_time_to_live => 10000, :marshal => :string)
         cc_val = {'f' => 1, 'o' => 4, 'b' => 1}
 
         hash = make_call(publisher, 'fooboo', 2)
@@ -228,16 +228,16 @@ class JMSRequestorBlockTest < Test::Unit::TestCase
             TripleWorker.new,
             HolderWorker.new,
         ]
-        Qwirk::JMS::Publisher.setup_dummy_publishing(workers)
+        Qwirk::QueueAdapter::JMS::Publisher.setup_dummy_publishing(workers)
       end
 
       teardown do
-        Qwirk::JMS::Publisher.clear_dummy_publishing
+        Qwirk::QueueAdapter::JMS::Publisher.clear_dummy_publishing
       end
 
       should "handle replies" do
 
-        publisher = Qwirk::JMS::Publisher.new(:virtual_topic_name => 'test_string', :response => true, :marshal => :string)
+        publisher = Qwirk::QueueAdapter::JMS::Publisher.new(:virtual_topic_name => 'test_string', :response => true, :marshal => :string)
         cc_val = {'f' => 1, 'o' => 4, 'b' => 1}
 
         hash = make_call(publisher, 'fooboo', 2)

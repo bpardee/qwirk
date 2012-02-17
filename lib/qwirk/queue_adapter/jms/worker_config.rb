@@ -5,7 +5,7 @@ module Qwirk
       class WorkerConfig
         include Rumx::Bean
 
-        bean_reader :queue_size,     :integer, 'Current count of messages in the queue'
+        #bean_reader :queue_size,     :integer, 'Current count of messages in the queue'
 
         attr_reader :parent, :destination, :marshal_type, :marshaler, :time_to_live, :persistent, :stopped
 
@@ -26,7 +26,7 @@ module Qwirk
         end
 
         def create_worker
-          Worker.new(@worker_config, @queue)
+          Worker.new(self)
         end
 
         def stop
