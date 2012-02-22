@@ -3,7 +3,8 @@ module Qwirk
   # Base Worker Class for any class that will be processing messages from topics or queues
   # By default, it will consume messages from a queue with the class name minus the Worker postfix.
   # For example, the queue call is unnecessary as it will default to a value of 'Foo' anyways:
-  #  class FooWorker < Qwirk::QueueAdapter::JMS::Worker
+  #  class FooWorker
+  #    include Qwirk::QueueAdapter::JMS::Worker
   #    queue 'Foo'
   #    def perform(obj)
   #      # Perform work on obj
@@ -12,8 +13,9 @@ module Qwirk
   #
   # A topic can be specified using virtual_topic as follows (ActiveMQ only).  Multiple separate workers can
   # subscribe to the same topic (under ActiveMQ - see http://activemq.apache.org/virtual-destinations.html):
-  #  class FooWorker < Qwirk::QueueAdapter::JMS::Worker
-  #    virtual_topic 'Zulu'
+  #  class FooWorker
+  #    include Qwirk::QueueAdapter::JMS::Worker
+  #    topic 'Zulu'
   #    def perform(obj)
   #      # Perform work on obj
   #    end
@@ -21,7 +23,8 @@ module Qwirk
   #
   # TODO (maybe):
   # Filters can also be specified within the class:
-  #  class FooWorker < Qwirk::QueueAdapter::JMS::Worker
+  #  class FooWorker
+  #    include Qwirk::QueueAdapter::JMS::Worker
   #    filter 'age > 30'
   #    def perform(obj)
   #      # Perform work on obj
@@ -155,7 +158,7 @@ module Qwirk
       end
     end
 
-    # Allow extends to clean up any resources associated with this worker
+    # gene_pool will call this method when it's closed
     def close
     end
 
