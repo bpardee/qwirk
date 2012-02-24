@@ -100,11 +100,17 @@ module Qwirk
     end
 
     def stop
+      puts "In Base worker_config stop"
       # First stop the adapter.  For InMem, this will not return until all the messages in the queue have
       # been processed since these messages are not persistent.
       @adapter.stop
       @read_mutex.synchronize do
-        @gene_pool.close if @gene_pool
+        if @gene_pool
+          @gene_pool.each do |worker|
+            worker.stop
+          end
+          @gene_pool.close
+        end
         @stopped = true
       end
     end
@@ -143,8 +149,6 @@ module Qwirk
       # The requirements are to expand and contract the worker pool as necessary.  Thus, we want to create a new worker
       # when there is potentially a message available on the queue and all of the current workers are still processing their message.
       # From a JMS perspective, we want to read the message, process it and then acknowledge it within the same thread.
-      # (I'm pretty sure this is correct in that we have to acknowledge the message in the same thread (JMS Consumer) that read it?
-      # although this is probably a reasonable requirement for providing a ZeroMQ adapter also)
       # Therefore, we want to acquire a worker (via gene_pool which handles contracting/expanding).  We tell that worker
       # that it can read a message (Worker#ok_to_read).  It reads the message in it's working thread and signals back (message_read_complete) that it has read the
       # message.  Since this is occurring in it's worker thread, we have to signal our event thread (this method) that
@@ -158,14 +162,14 @@ module Qwirk
       @event_loop_thread = Thread.new do
         begin
           while !@stopped
-            #puts "#{self}: Waiting for worker checkout"
+            puts "#{self}: Waiting for worker checkout"
             worker = @gene_pool.checkout
-            #puts "#{self}: Done waiting for worker checkout #{worker}"
+            puts "#{self}: Done waiting for worker checkout #{worker}"
             worker.ok_to_read
             @read_mutex.synchronize do
-              #puts "#{self}: Waiting for read complete"
+              puts "#{self}: Waiting for read complete"
               @read_condition.wait(@read_mutex)
-              #puts "#{self}: Done waiting for read complete"
+              puts "#{self}: Done waiting for read complete"
             end
           end
           @status = 'Stopped'

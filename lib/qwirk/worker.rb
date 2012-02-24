@@ -146,20 +146,25 @@ module Qwirk
     # From an InMem perspective, we don't want the workers stopping until all messages in the queue have been processed.
     # Therefore we want to stop the
     def stop
+      puts "In base worker stop"
       @status  = 'Stopping'
       @stopped = true
-      @read_mutex.synchronize do
-        @read_condition.signal
-      end
-      # Don't clobber adapter resources until we're finished processing the current message
+      #puts "base worker stop waiting for read mutex"
+      #@read_mutex.synchronize do
+      #  @read_condition.signal
+      #end
+      puts "base worker stop waiting for processing mutex"
       @processing_mutex.synchronize do
         # This should interrupt @adapter.receive_message above and cause it to return nil
         @adapter.close
       end
+      puts "base worker stop complete"
     end
 
     # gene_pool will call this method when it's closed
     def close
+      puts "in base worker close"
+      # Don't clobber adapter resources until we're finished processing the current message
     end
 
     def perform(object)
@@ -183,10 +188,10 @@ module Qwirk
       Qwirk.logger.debug "#{self}: Starting receive loop"
       while !@stopped && !config.adapter.stopped
         @read_mutex.synchronize do
-          #puts "#{self}: Waiting for next available read"
+          puts "#{self}: Waiting for next available read"
           @read_condition.wait(@read_mutex) unless @stopped || @ok_to_read
 
-          #puts "#{self}: Done waiting for next available read"
+          puts "#{self}: Done waiting for next available read"
           if !@stopped && @ok_to_read
             @ok_to_read = false
             puts "#{self}: Waiting for next adapter read"
@@ -203,8 +208,8 @@ module Qwirk
               config.message_processing_complete(self)
               Qwirk.logger.info {"#{self}::on_message (#{'%.1f' % delta}ms)"} if Qwirk::QueueAdapter::JMS::Connection.log_times?
               Qwirk.logger.flush if Qwirk.logger.respond_to?(:flush)
-            else
-              config.message_processing_complete(self)
+            #else
+            #  config.message_processing_complete(self)
             end
           end
         end

@@ -30,6 +30,7 @@ module Qwirk
         end
 
         def stop
+          puts "in jms worker config stop"
           @stopped = true
         end
       end

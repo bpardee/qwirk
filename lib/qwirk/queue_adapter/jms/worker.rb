@@ -42,6 +42,7 @@ module Qwirk
         end
 
         def close
+          puts "in jms worker close"
           return if @closed
           Qwirk.logger.info "Closing JMS worker #{@worker_config.parent.name}"
           # Don't clobber the session before a reply
