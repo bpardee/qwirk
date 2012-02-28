@@ -8,6 +8,8 @@ module Qwirk
     include Rumx::Bean
     attr_reader   :env, :worker_configs, :name
 
+    bean_attr_accessor :poll_time,           :float,   'How often the manager should poll the workers for their status for use by :idle_worker_timeout and :max_read_threshold'
+
     # Constructs a manager.  Accepts a hash of config options
     #   name         - name which this bean will be added
     #   parent_bean  - parent Rumx::Bean that this bean will be a child of.  Defaults to the Rumx::Bean.root
@@ -21,6 +23,7 @@ module Qwirk
     def initialize(options={})
       @stopped          = false
       @name             = options[:name] || Qwirk::DEFAULT_NAME
+      @poll_time        = 3.0
       parent_bean       = options[:parent_bean] || Rumx::Bean.root
       @worker_configs   = []
       @env              = options[:env]
@@ -50,10 +53,10 @@ module Qwirk
       @timer_thread = Thread.new do
         while !@stopped
           @worker_configs.each do |worker_config|
-            worker_config.periodic_call
+            worker_config.periodic_call(@poll_time)
           end
+          sleep @poll_time
         end
-        sleep 20
       end
     end
 

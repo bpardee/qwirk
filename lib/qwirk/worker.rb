@@ -36,7 +36,7 @@ module Qwirk
     include Qwirk::BaseWorker
 
     attr_accessor :message
-    attr_reader   :status, :adapter
+    attr_reader   :status, :adapter, :start_worker_time, :start_read_time, :start_processing_time
 
     module ClassMethods
       def queue(name, opts={})
@@ -115,28 +115,15 @@ module Qwirk
     def start(index, worker_config)
       @status               = 'Started'
       @stopped              = false
-      @read_mutex           = Mutex.new
-      @read_condition       = ConditionVariable.new
       @processing_mutex     = Mutex.new
-      @processing_condition = ConditionVariable.new
-      @ok_to_read           = false
       self.index  = index
       self.config = worker_config
       @adapter = worker_config.adapter.create_worker
       self.thread = Thread.new do
-        java.lang.Thread.current_thread.name = "Qwirk worker: #{self}"
+        java.lang.Thread.current_thread.name = "Qwirk worker: #{self}" if RUBY_PLATFORM == 'jruby'
         #Qwirk.logger.debug "#{worker}: Started thread with priority #{Thread.current.priority}"
         event_loop
       end
-    end
-
-    def ok_to_read
-      #puts "#{self}: got ok_to_read"
-      @read_mutex.synchronize do
-        @ok_to_read = true
-        @read_condition.signal
-      end
-      #puts "#{self}: done ok_to_read"
     end
 
     # Workers will be starting and stopping on an as needed basis.  Thus, when they get a stop command they should
@@ -149,22 +136,11 @@ module Qwirk
       puts "In base worker stop"
       @status  = 'Stopping'
       @stopped = true
-      #puts "base worker stop waiting for read mutex"
-      #@read_mutex.synchronize do
-      #  @read_condition.signal
-      #end
-      puts "base worker stop waiting for processing mutex"
       @processing_mutex.synchronize do
         # This should interrupt @adapter.receive_message above and cause it to return nil
         @adapter.close
       end
       puts "base worker stop complete"
-    end
-
-    # gene_pool will call this method when it's closed
-    def close
-      puts "in base worker close"
-      # Don't clobber adapter resources until we're finished processing the current message
     end
 
     def perform(object)
@@ -175,6 +151,7 @@ module Qwirk
       "#{config.name}:#{index}"
     end
 
+    # Allow override of backtrace logging in case the client doesn't want to get spammed with it (maybe just config instead?)
     def log_backtrace(e)
       Qwirk.logger.error "\t#{e.backtrace.join("\n\t")}"
     end
@@ -186,43 +163,33 @@ module Qwirk
     # Start the event loop for handling messages off the queue
     def event_loop
       Qwirk.logger.debug "#{self}: Starting receive loop"
+      @start_worker_time = Time.now
       while !@stopped && !config.adapter.stopped
-        @read_mutex.synchronize do
-          puts "#{self}: Waiting for next available read"
-          @read_condition.wait(@read_mutex) unless @stopped || @ok_to_read
-
-          puts "#{self}: Done waiting for next available read"
-          if !@stopped && @ok_to_read
-            @ok_to_read = false
-            puts "#{self}: Waiting for next adapter read"
-            msg = @adapter.receive_message
-            puts "#{self}: Done waiting for next adapter read"
-            if msg
-              config.message_read_complete(self)
-              delta = config.timer.measure do
-                @processing_mutex.synchronize do
-                  on_message(msg)
-                  @adapter.acknowledge_message(msg)
-                end
-              end
-              config.message_processing_complete(self)
-              Qwirk.logger.info {"#{self}::on_message (#{'%.1f' % delta}ms)"} if Qwirk::QueueAdapter::JMS::Connection.log_times?
-              Qwirk.logger.flush if Qwirk.logger.respond_to?(:flush)
-            #else
-            #  config.message_processing_complete(self)
+        puts "#{self}: Waiting for read"
+        @start_read_time = Time.now
+        msg = @adapter.receive_message
+        if msg
+          @start_processing_time = Time.now
+          Qwirk.logger.debug {"#{self}: Done waiting for read in #{@start_processing_time - @start_read_time} seconds"}
+          delta = config.timer.measure do
+            @processing_mutex.synchronize do
+              on_message(msg)
+              @adapter.acknowledge_message(msg)
             end
           end
+          Qwirk.logger.info {"#{self}::on_message (#{'%.1f' % delta}ms)"} if Qwirk::QueueAdapter::JMS::Connection.log_times?
+          Qwirk.logger.flush if Qwirk.logger.respond_to?(:flush)
         end
       end
-      @status = 'Stopped'
       Qwirk.logger.info "#{self}: Exiting"
     rescue Exception => e
       @status = "Terminated: #{e.message}"
       Qwirk.logger.error "#{self}: Exception, thread terminating: #{e.message}\n\t#{e.backtrace.join("\n\t")}"
     ensure
+      @status = 'Stopped'
+      @adapter.close
       Qwirk.logger.flush if Qwirk.logger.respond_to?(:flush)
       config.worker_stopped(self)
-      close
     end
 
     def on_message(message)

@@ -1,9 +1,13 @@
 source "http://rubygems.org"
 
-gem 'jruby-jms', '>= 0.11.2'
-gem 'gene_pool', '>= 1.2.0'
 gem 'rumx', '>= 0.2.0'
 gem 'rack'
+
+platforms :jruby do
+  gem 'jruby-jms', '>= 0.11.2'
+  # jms doensn't include this dependency yet
+  gem 'gene_pool'
+end
 
 group :development do
   gem 'rake'

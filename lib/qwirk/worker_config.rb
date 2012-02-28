@@ -1,5 +1,4 @@
 require 'rumx'
-require 'gene_pool'
 
 module Qwirk
   class WorkerConfig
@@ -8,36 +7,37 @@ module Qwirk
     attr_reader        :name, :marshal_type, :marshaler
 
     bean_reader        :count,               :integer, 'Current number of workers'
+    bean_attr_accessor :min_count,           :integer, 'Min number of workers allowed', :config_item => true
     bean_attr_accessor :max_count,           :integer, 'Max number of workers allowed', :config_item => true
-    bean_attr_accessor :warn_timeout,        :float,   'Idle timeout where a warning message will be logged if unable to acquire a worker (i.e., all workers are currently busy)', :config_item => true
     bean_attr_accessor :idle_worker_timeout, :integer, 'Timeout where an idle worker will be removed from the worker pool and it\'s resources closed (0 for no removal)', :config_item => true
+    bean_attr_accessor :max_read_threshold,  :float,   'Threshold where a new worker will be added if none of the workers have had to wait this amount of time on a read', :config_item => true
     # The adapter refers to the corresponding class in Qwirk::QueueAdapter::<type>::WorkerConfig
     bean_attr_reader   :adapter,             :bean,    'Adapter for worker queue interface'
     bean_attr_reader   :timer,               :bean,    'Track the times for this worker'
 
     # Define the default config values for the attributes all workers will share.  These will be sent as options to the constructor
     def self.initial_default_config
-      {:max_count => 0, :warn_timeout => 0.25, :idle_worker_timeout => 60}
+      {:min_count => 0, :max_count => 0, :idle_worker_timeout => 60, :max_read_threshold => 1.0}
     end
 
     # Create new WorkerConfig to manage workers of a common class
     def initialize(name, manager, worker_class, options)
-      @status         = 'Idle'
-      @warn_timeout   = 0.25
-      @stopped        = false
-      @max_count      = 0
-      @name           = name
-      @index_count    = 0
-      @index_mutex    = Mutex.new
-      @manager        = manager
-      @worker_class   = worker_class
-      @read_mutex     = Mutex.new
-      @read_condition = ConditionVariable.new
-      response_options = worker_class.queue_options[:response] || {}
-      @adapter        = QueueAdapter.create_worker_config(self, worker_class.queue_name(@name), worker_class.topic_name, worker_class.queue_options, response_options)
+      @workers          = []
+      @status           = 'Idle'
+      @stopped          = false
+      @max_count        = 0
+      @name             = name
+      @index_count      = 0
+      @index_mutex      = Mutex.new
+      @manager          = manager
+      @worker_class     = worker_class
+      @worker_mutex     = Mutex.new
+      @worker_condition = ConditionVariable.new
+      response_options  = worker_class.queue_options[:response] || {}
+      @adapter          = QueueAdapter.create_worker_config(self, worker_class.queue_name(@name), worker_class.topic_name, worker_class.queue_options, response_options)
       # Defines how we will marshal the response
-      @marshal_type = (response_options[:marshal] || @adapter.default_marshal_type).to_s
-      @marshaler    = MarshalStrategy.find(@marshal_type)
+      @marshal_type     = (response_options[:marshal] || @adapter.default_marshal_type).to_s
+      @marshaler        = MarshalStrategy.find(@marshal_type)
 
       #Qwirk.logger.debug { "options=#{options.inspect}" }
       options.each do |key, value|
@@ -50,73 +50,42 @@ module Qwirk
     end
 
     def count
-      return 0 unless @gene_pool
-      @gene_pool.size
-    end
-
-    def warn_timeout=(value)
-      @warn_timeout = value
-      @gene_pool.warn_timeout = value if @gene_pool
+      @worker_mutex.synchronize { return @workers.size }
     end
 
     def max_count=(new_max_count)
       return if @max_count == new_max_count
       raise "#{@worker_class.name}-#{@name}: Can't change count since we've been stopped" if @stopped
-      @read_mutex.synchronize do
-        if new_max_count > 0
-          Qwirk.logger.info "#{@worker_class.name}: Changing max number of workers from #{@max_count} to #{new_max_count}"
-          @timer ||= Rumx::Beans::TimerAndError.new
-          if !@gene_pool
-            @gene_pool = GenePool.new(:name         => "#{@manager.name}: #{@name}",
-                                      :pool_size    => new_max_count,
-                                      :warn_timeout => @warn_timeout,
-                                      :close_proc   => :stop,
-                                      :logger       => Qwirk.logger) do
-              worker = @worker_class.new
-              worker.start(@index_count, self)
-              @index_mutex.synchronize { @index_count += 1 }
-              worker
-            end
-            event_loop
-          else
-            # TODO: We should probably do a check for max_count == 0 and remove the gene_pool? Check in-mem adapter and dropping of messages
-            @gene_pool.pool_size = new_max_count
+      Qwirk.logger.info "#{@worker_class.name}: Changing max number of workers from #{@max_count} to #{new_max_count}"
+      @worker_mutex.synchronize do
+        @timer ||= Rumx::Beans::TimerAndError.new
+        if @workers.size > new_max_count
+          @workers[new_max_count..-1].each { |worker| worker.stop }
+          while @workers.size > new_max_count
+            @workers.last.stop
+            @worker_condition.wait(@worker_mutex)
           end
         end
+        @max_count = new_max_count
       end
-      @max_count = new_max_count
-    end
-
-    def message_read_complete(worker)
-      #puts "#{self}: got message_read_complete from #{worker}"
-      @read_mutex.synchronize do
-        @read_condition.signal
-      end
-    end
-
-    def message_processing_complete(worker)
-      #puts "#{self}: got message_processing_complete from #{worker}"
-      @gene_pool.checkin(worker)
     end
 
     def stop
-      puts "In Base worker_config stop"
+      Qwirk.logger.debug { "In Base worker_config stop" }
       # First stop the adapter.  For InMem, this will not return until all the messages in the queue have
       # been processed since these messages are not persistent.
       @adapter.stop
-      @read_mutex.synchronize do
-        if @gene_pool
-          @gene_pool.each do |worker|
-            worker.stop
-          end
-          @gene_pool.close
+      @worker_mutex.synchronize do
+        @workers.each { |worker| worker.stop }
+        while @workers.size > 0
+          @worker_condition.wait(@worker_mutex)
         end
         @stopped = true
       end
     end
 
     def worker_stopped(worker)
-      @gene_pool.remove(worker)
+      remove_worker(worker)
     end
 
     # Override rumx bean method
@@ -133,9 +102,30 @@ module Qwirk
       @marshaler.unmarshal(marshaled_object)
     end
 
-    def periodic_call
-      if @gene_pool && @idle_worker_timeout > 0
-        @gene_pool.remove_idle(@idle_worker_timeout)
+    def periodic_call(poll_time)
+      now = Time.now
+      add_new_worker = true
+      @worker_mutex.synchronize do
+        @workers.each do |worker|
+          start_worker_time = worker.start_worker_time
+          start_read_time = worker.start_read_time
+          if !start_read_time || (now - start_worker_time) < (poll_time + @max_read_threshold)
+            #Qwirk.logger.debug { "#{self}: Skipping newly created worker" }
+            add_new_worker = false
+            next
+          end
+          end_read_time = worker.start_processing_time
+          # If the processing time is actually from the previous processing, then we're probably still waiting for the read to complete.
+          if !end_read_time || end_read_time < start_read_time
+            if @workers.size > 1 && (now - start_read_time) > @idle_worker_timeout
+              worker.stop
+            end
+            end_read_time = now
+          end
+          #Qwirk.logger.debug { "#{self}: start=#{start_read_time} end=#{end_read_time} thres=#{@max_read_threshold} add_new_worker=#{add_new_worker}" }
+          add_new_worker = false if (end_read_time - start_read_time) > @max_read_threshold
+        end
+        @workers << add_worker if add_new_worker && @workers.size < @max_count
       end
     end
 
@@ -145,41 +135,19 @@ module Qwirk
 
     private
 
-    def event_loop
-      # The requirements are to expand and contract the worker pool as necessary.  Thus, we want to create a new worker
-      # when there is potentially a message available on the queue and all of the current workers are still processing their message.
-      # From a JMS perspective, we want to read the message, process it and then acknowledge it within the same thread.
-      # Therefore, we want to acquire a worker (via gene_pool which handles contracting/expanding).  We tell that worker
-      # that it can read a message (Worker#ok_to_read).  It reads the message in it's working thread and signals back (message_read_complete) that it has read the
-      # message.  Since this is occurring in it's worker thread, we have to signal our event thread (this method) that
-      # the worker has read a message and it can acquire a new worker.   In the worker's thread, it processes the message,
-      # acknowledges it and signals that is done and ready for a new message (message_processing_complete) so that we
-      # can release the worker to the gene_pool.
-      @status         = 'Started'
-      @stopped        = false
+    def add_worker
+      worker = @worker_class.new
+      worker.start(@index_count, self)
+      Qwirk.logger.debug {"#{self}: Adding worker #{worker}"}
+      @index_mutex.synchronize { @index_count += 1 }
+      worker
+    end
 
-      Qwirk.logger.debug {"#{self}: Starting receive loop"}
-      @event_loop_thread = Thread.new do
-        begin
-          while !@stopped
-            puts "#{self}: Waiting for worker checkout"
-            worker = @gene_pool.checkout
-            puts "#{self}: Done waiting for worker checkout #{worker}"
-            worker.ok_to_read
-            @read_mutex.synchronize do
-              puts "#{self}: Waiting for read complete"
-              @read_condition.wait(@read_mutex)
-              puts "#{self}: Done waiting for read complete"
-            end
-          end
-          @status = 'Stopped'
-          Qwirk.logger.info "#{self}: Exiting event loop"
-        rescue Exception => e
-          @status = "Terminated: #{e.message}"
-          Qwirk.logger.error "#{self}: Exception, thread terminating: #{e.message}\n\t#{e.backtrace.join("\n\t")}"
-        ensure
-          Qwirk.logger.flush if Qwirk.logger.respond_to?(:flush)
-        end
+    def remove_worker(worker)
+      Qwirk.logger.debug {"#{self}: Deleting worker #{worker}"}
+      @worker_mutex.synchronize do
+        @workers.delete(worker)
+        @worker_condition.broadcast
       end
     end
   end
