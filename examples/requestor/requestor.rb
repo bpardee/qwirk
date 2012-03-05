@@ -27,12 +27,12 @@ class Requestor
   @@publisher = Qwirk::Publisher.new(:queue_name => 'ReverseEcho', :response => {:time_to_live => 10000}, :marshal => :string)
 
   def initialize
-    @mutex = Mutex.new
+    @outstanding_hash_mutex = Mutex.new
     @messages = []
   end
 
   def publish(message, timeout, sleep_time, thread_count)
-    @mutex.synchronize do
+    @outstanding_hash_mutex.synchronize do
       @messages = []
     end
     threads   = []
@@ -52,7 +52,7 @@ class Requestor
           puts "#{i}: Exception: #{e.message}\n\t#{e.backtrace.join("\n\t")}"
           response = e.message
         end
-        @mutex.synchronize do
+        @outstanding_hash_mutex.synchronize do
           @messages << MessageInfo.new(request, response)
         end
       end
@@ -61,7 +61,7 @@ class Requestor
   end
 
   def messages
-    @mutex.synchronize do
+    @outstanding_hash_mutex.synchronize do
       return @messages.dup
     end
   end

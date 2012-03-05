@@ -4,7 +4,7 @@ require 'qwirk'
 class Publisher
   include Rumx::Bean
 
-  bean_attr_accessor :bar_count, :integer, 'Number of Bar messages sent'
+  bean_attr_accessor :count, :integer, 'Number of Bar messages sent'
   bean_attr_accessor :baz_count, :integer, 'Number of Baz messages sent'
 
   bean_operation :send_bar, :void, 'Send messages to the Bar worker', [
@@ -19,20 +19,20 @@ class Publisher
       [ :sleep_time, :float,   'Time to sleep between messages',        0.5                ]
   ]
 
-  @@bar_publisher = Qwirk::Publisher.new(:queue_name => 'Bar', :marshal => :bson)
+  @@publisher = Qwirk::Publisher.new(:queue_name => 'Bar', :marshal => :bson)
   @@baz_publisher = Qwirk::Publisher.new(:queue_name => 'Baz', :marshal => :string)
 
   def initialize
-    @bar_count = 0
+    @count = 0
     @baz_count = 0
   end
 
   def send_bar(count, message, sleep_time)
     count.times do
-      @bar_count += 1
-      obj = {'count' => @bar_count, 'message' => message}
+      @count += 1
+      obj = {'count' => @count, 'message' => message}
       puts "Publishing to Bar object: #{obj.inspect}"
-      @@bar_publisher.publish(obj)
+      @@publisher.publish(obj)
       sleep sleep_time
     end
   end

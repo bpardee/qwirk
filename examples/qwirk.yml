@@ -1,0 +1,8 @@
+:factory: org.apache.activemq.ActiveMQConnectionFactory
+:broker_url: tcp://localhost:61616
+:require_jars:
+  - /usr/local/Cellar/activemq/5.5.1/libexec/activemq-all-5.5.1.jar
+  - /usr/local/Cellar/activemq/5.5.1/libexec/lib/optional/slf4j-log4j12-1.5.11.jar
+  - /usr/local/Cellar/activemq/5.5.1/libexec/lib/optional/log4j-1.2.14.jar
+#:username: myuser
+#:password: mypassword

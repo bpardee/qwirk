@@ -54,7 +54,7 @@ module Qwirk
       raise 'init_rails has not been called, modify your config/environment.rb to include this call' if @is_jms_enabled.nil?
       raise 'Messaging is not enabled, modify your config/jms.yml file' unless @is_jms_enabled
       default_config = {
-          :persist_file    => File.join(Rails.root, "log", "qwirk.yml"),
+          :persist_file    => File.join(Rails.root, "log", "qwirk_persist.yml"),
           :worker_file     => File.join(Rails.root, "config", "workers.yml"),
           :stop_on_signal  => true,
           :env             => @env,

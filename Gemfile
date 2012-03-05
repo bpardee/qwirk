@@ -5,6 +5,7 @@ gem 'rack'
 
 platforms :jruby do
   gem 'jruby-jms', '>= 0.11.2'
+  gem 'jruby-activemq'
   # jms doensn't include this dependency yet
   gem 'gene_pool'
 end

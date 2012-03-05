@@ -5,13 +5,13 @@ module Qwirk
       class Topic
         def initialize(name)
           @name            = name
-          @mutex           = Mutex.new
+          @outstanding_hash_mutex           = Mutex.new
           @worker_hash     = {}
           @stopped         = false
         end
 
         def get_worker_queue(worker_name, queue_max_size)
-          @mutex.synchronize do
+          @outstanding_hash_mutex.synchronize do
             queue = @worker_hash[worker_name] ||= Queue.new("#{@name}:#{worker_name}")
             queue.max_size = queue_max_size
             return queue
@@ -30,7 +30,7 @@ module Qwirk
         end
 
         def write(obj, response_options)
-          @mutex.synchronize do
+          @outstanding_hash_mutex.synchronize do
             @worker_hash.each_value do |queue|
               if !@stopped
                 queue.write(obj, response_options)

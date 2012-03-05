@@ -16,9 +16,7 @@ module Qwirk
           # Default to true
           @log_times = true if @log_times.nil?
 
-          # Let's not create a session_pool unless we're going to use it
-          @session_pool_mutex = Mutex.new
-
+          @session_pool = connection.create_session_pool(@config)
           @connection = ::JMS::Connection.new(config)
           @connection.start
 
@@ -41,13 +39,7 @@ module Qwirk
         end
 
         def session_pool
-          # Don't use the mutex unless we have to!
-          return @session_pool if @session_pool
-          @session_pool_mutex.synchronize do
-            # if it's been created in between the above call and now, return it
-            return @session_pool if @session_pool
-            return @session_pool = connection.create_session_pool(@config)
-          end
+          @session_pool
         end
 
         def close

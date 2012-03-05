@@ -9,7 +9,7 @@ require './triple_worker'
 
 # If we're not starting up a standalone publisher, then start up a manager
 if ENV['RACK_ENV'] != 'publisher'
-  manager = Qwirk::Manager.new(:name => 'Worker', :persist_file => 'qwirk.yml')
+  manager = Qwirk::Manager.new(:name => 'Worker', :persist_file => 'qwirk_persist.yml')
   manager['CharCount'].max_count       = 1
   manager['ExceptionRaiser'].max_count = 1
   manager['Length'].max_count          = 1

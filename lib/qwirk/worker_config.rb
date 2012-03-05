@@ -25,6 +25,7 @@ module Qwirk
       @workers          = []
       @status           = 'Idle'
       @stopped          = false
+      @min_count        = 0
       @max_count        = 0
       @name             = name
       @index_count      = 0
@@ -53,10 +54,22 @@ module Qwirk
       @worker_mutex.synchronize { return @workers.size }
     end
 
+    def min_count=(new_min_count)
+      return if @min_count == new_min_count
+      raise "#{@worker_class.name}-#{@name}: Can't change count since we've been stopped" if @stopped
+      Qwirk.logger.info "#{@worker_class.name}: Changing min number of workers from #{@min_count} to #{new_min_count}"
+      self.max_count = new_min_count if @max_count < new_min_count
+      @worker_mutex.synchronize do
+        add_worker while @workers.size < new_min_count
+        @min_count = new_min_count
+      end
+    end
+
     def max_count=(new_max_count)
       return if @max_count == new_max_count
       raise "#{@worker_class.name}-#{@name}: Can't change count since we've been stopped" if @stopped
       Qwirk.logger.info "#{@worker_class.name}: Changing max number of workers from #{@max_count} to #{new_max_count}"
+      self.min_count = new_max_count if @min_count > new_max_count
       @worker_mutex.synchronize do
         @timer ||= Rumx::Beans::TimerAndError.new
         if @workers.size > new_max_count
@@ -105,6 +118,7 @@ module Qwirk
     def periodic_call(poll_time)
       now = Time.now
       add_new_worker = true
+      stop_count = 0
       @worker_mutex.synchronize do
         @workers.each do |worker|
           start_worker_time = worker.start_worker_time
@@ -117,15 +131,16 @@ module Qwirk
           end_read_time = worker.start_processing_time
           # If the processing time is actually from the previous processing, then we're probably still waiting for the read to complete.
           if !end_read_time || end_read_time < start_read_time
-            if @workers.size > 1 && (now - start_read_time) > @idle_worker_timeout
+            if (@workers.size - stop_count) > @min_count && (now - start_read_time) > @idle_worker_timeout
               worker.stop
+              stop_count += 1
             end
             end_read_time = now
           end
           #Qwirk.logger.debug { "#{self}: start=#{start_read_time} end=#{end_read_time} thres=#{@max_read_threshold} add_new_worker=#{add_new_worker}" }
           add_new_worker = false if (end_read_time - start_read_time) > @max_read_threshold
         end
-        @workers << add_worker if add_new_worker && @workers.size < @max_count
+        add_worker if add_new_worker && @workers.size < @max_count
       end
     end
 
@@ -140,7 +155,7 @@ module Qwirk
       worker.start(@index_count, self)
       Qwirk.logger.debug {"#{self}: Adding worker #{worker}"}
       @index_mutex.synchronize { @index_count += 1 }
-      worker
+      @@workers << worker
     end
 
     def remove_worker(worker)

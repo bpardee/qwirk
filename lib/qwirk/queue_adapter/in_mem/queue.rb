@@ -9,7 +9,7 @@ module Qwirk
         def initialize(name)
           @name            = name
           @max_size        = 0
-          @mutex           = Mutex.new
+          @outstanding_hash_mutex           = Mutex.new
           @read_condition  = ConditionVariable.new
           @write_condition = ConditionVariable.new
           @close_condition = ConditionVariable.new
@@ -23,23 +23,23 @@ module Qwirk
 
         def stop
           @stopped = true
-          @mutex.synchronize do
+          @outstanding_hash_mutex.synchronize do
             @write_condition.broadcast
             until @array.empty?
-              @close_condition.wait(@mutex)
+              @close_condition.wait(@outstanding_hash_mutex)
             end
             @read_condition.broadcast
           end
         end
 
         def read(worker)
-          @mutex.synchronize do
+          @outstanding_hash_mutex.synchronize do
             until @stopped  || worker.stopped do
               unless @array.empty?
                 @write_condition.signal
                 return @array.shift
               end
-              @read_condition.wait(@mutex)
+              @read_condition.wait(@outstanding_hash_mutex)
             end
             return if worker.stopped
             # We're not persistent, so even though we're stopped we're going to allow our workers to keep reading until the queue's empty
@@ -52,7 +52,7 @@ module Qwirk
         end
 
         def write(obj, response_options)
-          @mutex.synchronize do
+          @outstanding_hash_mutex.synchronize do
             # We just drop the message if no workers have been configured yet
             while !@stopped
               if @max_size == 0
@@ -65,7 +65,7 @@ module Qwirk
                 return
               end
               # TODO: Let's allow various write_full_modes such as :block, :remove_oldest, ? (Currently only blocks)
-              @write_condition.wait(@mutex)
+              @write_condition.wait(@outstanding_hash_mutex)
             end
           end
         end

@@ -40,12 +40,23 @@ module Qwirk
     def self.create_worker_config(worker_config, queue_name, topic_name, options, response_options)
       unless @worker_config_klass
         if QueueAdapter::JMS::Connection.inited?
-          @worker_config_klass = QueueAdapter::JMS::Worker
+          @worker_config_klass = JMS::WorkerConfig
         else
-          @worker_config_klass = QueueAdapter::InMem::Worker
+          @worker_config_klass = InMem::WorkerConfig
         end
       end
       return @worker_config_klass.new(worker_config, queue_name, topic_name, options, response_options)
+    end
+
+    # Ripped off from ActiveSupport
+    def underscore(camel_cased_word)
+      word = camel_cased_word.to_s.dup
+      word.gsub!(/::/, '/')
+      word.gsub!(/([A-Z]+)([A-Z][a-z])/,'\1_\2')
+      word.gsub!(/([a-z\d])([A-Z])/,'\1_\2')
+      word.tr!("-", "_")
+      word.downcase!
+      word
     end
   end
 end

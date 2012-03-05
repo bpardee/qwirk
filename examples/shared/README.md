@@ -3,7 +3,7 @@
 
 ## Step 1
 ### Start up the application
-* rm -f qwirk.yml
+* rm -f qwirk_persist.yml
 * rackup -p 4567
 
 ## Step 2

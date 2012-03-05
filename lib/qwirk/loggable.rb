@@ -12,7 +12,7 @@ module Qwirk
     def default_logger
       require 'logger'
       l = Logger.new($stdout)
-      l.level = Logger::INFO
+      l.level = Logger::DEBUG
       l
     end
 

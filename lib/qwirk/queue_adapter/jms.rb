@@ -37,10 +37,10 @@ module Qwirk
       end
 
       def self.parse_response(message)
-        if error_yaml = message['mt:exception']
+        if error_yaml = message['qwirk:exception']
           return Qwirk::RemoteException.from_hash(YAML.load(error_yaml))
         end
-        marshaler = Qwirk::MarshalStrategy.find(message['mt:marshal'] || :ruby)
+        marshaler = Qwirk::MarshalStrategy.find(message['qwirk:marshal'] || :ruby)
         return marshaler.unmarshal(message.data)
       end
     end

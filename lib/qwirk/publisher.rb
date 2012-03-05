@@ -31,11 +31,15 @@ module Qwirk
     end
 
     # Publish the given object to the address.
-    def publish(object, props={})
+    def publish(object, task_id=nil, props={})
       start = Time.now
       marshaled_object = @marshaler.marshal(object)
-      message_id = @adapter.publish(marshaled_object, @marshal_sym, @marshaler.marshal_type, props)
+      message_id = @adapter.publish(marshaled_object, @marshal_sym, @marshaler.marshal_type, task_id, props)
       return PublishHandle.new(self, message_id, start)
+    end
+
+    def create_task_consumer(task_id)
+      @adapter.create_task_consumer.task_id
     end
 
     def to_s

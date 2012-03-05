@@ -5,13 +5,13 @@ module Qwirk
       class ReplyQueue
         def initialize(name)
           @name            = name
-          @mutex           = Mutex.new
+          @outstanding_hash_mutex           = Mutex.new
           @read_condition  = ConditionVariable.new
           @array           = []
         end
 
         def read_response(timeout)
-          @mutex.synchronize do
+          @outstanding_hash_mutex.synchronize do
             return @array.shift unless @array.empty?
             timed_read_condition_wait(timeout)
             return @array.shift
@@ -20,7 +20,7 @@ module Qwirk
         end
 
         def write_response(obj, worker_name)
-          @mutex.synchronize do
+          @outstanding_hash_mutex.synchronize do
             @array << [obj, worker_name]
             @read_condition.signal
             return
@@ -38,13 +38,13 @@ module Qwirk
         if RUBY_PLATFORM == 'jruby' || RUBY_VERSION[0,3] != '1.8'
           def timed_read_condition_wait(timeout)
             # This method not available in MRI 1.8
-            @read_condition.wait(@mutex, timeout)
+            @read_condition.wait(@outstanding_hash_mutex, timeout)
           end
         else
           require 'timeout'
           def timed_read_condition_wait(timeout)
             Timeout.timeout(timeout) do
-              @read_condition.wait(@mutex)
+              @read_condition.wait(@outstanding_hash_mutex)
             end
           rescue Timeout::Error => e
           end

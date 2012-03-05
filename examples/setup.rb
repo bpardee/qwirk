@@ -10,9 +10,9 @@ require 'logger'
 
 #Qwirk.logger = Logger.new($stdout)
 
-jms_file = File.expand_path('../jms.yml', __FILE__)
-if File.exist?(jms_file)
-  config = YAML.load(ERB.new(File.read(jms_file)).result(binding))
+qwirk_file = File.expand_path('../qwirk_persist.yml', __FILE__)
+if File.exist?(qwirk_file)
+  config = YAML.load(ERB.new(File.read(qwirk_file)).result(binding))
   Qwirk::QueueAdapter::JMS::Connection.init(config)
   Qwirk::QueueAdapter.set(:jms)
 else

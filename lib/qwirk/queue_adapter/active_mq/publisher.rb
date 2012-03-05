@@ -1,7 +1,7 @@
 module Qwirk
   module QueueAdapter
-    module JMS
-      class ActiveMQPublisher < Publisher
+    module ActiveMQ
+      class Publisher < JMS::Publisher
         def initialize(queue_name, topic_name, options)
           topic_name = "VirtualTopic.#{topic_name}" if topic_name
           super(queue_name, topic_name, options)
