@@ -29,11 +29,11 @@ module Qwirk
           raise "topic should not have been read for #{name}"
         end
 
-        def write(obj, response_options)
+        def write(obj)
           @outstanding_hash_mutex.synchronize do
             @worker_hash.each_value do |queue|
               if !@stopped
-                queue.write(obj, response_options)
+                queue.write(obj)
               end
             end
           end

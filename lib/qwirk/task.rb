@@ -33,15 +33,16 @@ module Qwirk
     end
 
     def initialize(publisher, task_id, opts={})
+      @publisher              = publisher
       @pending_hash           = Hash.new
       @pending_hash_mutex     = Mutex.new
       @pending_hash_condition = ConditionVariable.new
-      @publisher              = publisher
       @task_id                = task_id
       @stopped                = false
       @finished_publishing    = false
       @max_pending_records    = opts[:max_pending_records] || 100
 
+      @producer, @consumer   = publisher.create_producer_consumer_pair(@task_id)
       @reply_thread = Thread.new do
         java.lang.Thread.current_thread.name = "Qwirk task: #{task_id}"
         reply_event_loop
@@ -62,14 +63,15 @@ module Qwirk
     def on_done()
     end
 
-    def publish(object, props={})
+    def publish(object)
       @pending_hash_mutex.synchronize do
         while @pending_hash.size >= @max_pending_records
-          @worker_condition.wait(@worker_mutex)
+          @pending_hash_condition.wait(@pending_hash_mutex)
         end
       end
       raise "#{self}: Invalid publish, we've been stopped" if @stopped
-      message_id = @publisher.publish(object, props)
+      marshaled_object = @publisher.marshaler.marshal(object)
+      message_id = @producer.send(marshaled_object)
       @pending_hash_mutex.synchronize do
         @pending_hash[message_id] = object
       end
@@ -103,9 +105,7 @@ module Qwirk
     end
 
     def reply_event_loop
-      @consumer = @publisher.create_task_consumer(@task_id)
-
-      while !@stopped && pair = @consumer.read_response
+      while !@stopped && pair = @consumer.receive
         message_id, response = pair
         @pending_hash_mutex.synchronize do
           unless @stopped

@@ -161,7 +161,7 @@ class JMSRequestorTest < Test::Unit::TestCase
         @manager = Qwirk::Manager.new(:domain => @domain)
         @manager.add(SleepWorker, 10)
         sleep 1
-        @publisher = Qwirk::QueueAdapter::JMS::Publisher.new(:queue_name => 'Sleep', :marshal => :string, :response_time_to_live => 10000)
+        @producer = Qwirk::QueueAdapter::JMS::Publisher.new(:queue_name => 'Sleep', :marshal => :string, :response_time_to_live => 10000)
       end
 
       teardown do
@@ -178,7 +178,7 @@ class JMSRequestorTest < Test::Unit::TestCase
           start_time   = Time.now
           (0..9).each do |i|
             threads << Thread.new(i) do |i|
-              handle = @publisher.publish(work_sleep_time)
+              handle = @producer.publish(work_sleep_time)
               sleep publish_sleep_time
               if work_sleep_time < timeout_time
                 response = handle.read_response(timeout_time).to_i

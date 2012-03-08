@@ -24,11 +24,11 @@ class Requestor
       [ :thread_count, :integer, 'Number of different threads that are publishing and receiving the message', 10      ]
   ]
 
-  @@publisher = Qwirk::Publisher.new(:queue_name => 'ReverseEcho', :response => {:time_to_live => 10000}, :marshal => :string)
 
-  def initialize
+  def initialize(adapter)
     @outstanding_hash_mutex = Mutex.new
     @messages = []
+    @publisher = Qwirk::Publisher.new(adapter, :queue_name => 'ReverseEcho', :response => {:time_to_live => 10000}, :marshal => :string)
   end
 
   def publish(message, timeout, sleep_time, thread_count)
@@ -42,7 +42,7 @@ class Requestor
         request = "##{i}: #{message}"
         response = nil
         begin
-          handle = @@publisher.publish(request)
+          handle = @publisher.publish(request)
           # Here's where we'd go off and do other work
           sleep sleep_time
           puts "#{i}: Finished sleeping at #{Time.now.to_f}"

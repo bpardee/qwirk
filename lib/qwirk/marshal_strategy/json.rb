@@ -7,6 +7,10 @@ module Qwirk
         :text
       end
 
+      def to_sym
+        :json
+      end
+
       begin
         require 'json'
         def marshal(object)
@@ -27,7 +31,7 @@ module Qwirk
         end
       end
       
-      MarshalStrategy.register(:json => self)
+      MarshalStrategy.register(self)
     end
   end
 end

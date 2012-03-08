@@ -4,13 +4,13 @@ module Qwirk
 
       class ReplyQueue
         def initialize(name)
-          @name            = name
-          @outstanding_hash_mutex           = Mutex.new
-          @read_condition  = ConditionVariable.new
-          @array           = []
+          @name                   = name
+          @outstanding_hash_mutex = Mutex.new
+          @read_condition         = ConditionVariable.new
+          @array                  = []
         end
 
-        def read_response(timeout)
+        def timeout_read(timeout)
           @outstanding_hash_mutex.synchronize do
             return @array.shift unless @array.empty?
             timed_read_condition_wait(timeout)
@@ -19,9 +19,9 @@ module Qwirk
           return nil
         end
 
-        def write_response(obj, worker_name)
+        def write(obj)
           @outstanding_hash_mutex.synchronize do
-            @array << [obj, worker_name]
+            @array << obj
             @read_condition.signal
             return
           end

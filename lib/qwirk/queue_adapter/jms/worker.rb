@@ -5,8 +5,10 @@ module Qwirk
       class Worker
         def initialize(worker_config)
           @worker_config = worker_config
-          @session = Connection.create_session
-          @consumer = @session.consumer(@worker_config.destination)
+          @name          = worker_config.parent.name
+          @marshaler     = worker_config.parent.marshaler
+          @session       = worker_config.connection.create_session
+          @consumer      = @session.consumer(worker_config.destination)
           @session.start
         end
 
@@ -19,11 +21,12 @@ module Qwirk
         end
 
         def send_response(original_message, marshaled_object)
-          do_send_response(@worker_config.marshal_type, original_message, marshaled_object)
+          do_send_response(@marshaler, original_message, marshaled_object)
         end
 
         def send_exception(original_message, e)
-          do_send_response(:string, original_message, "Exception: #{e.message}") do |reply_message|
+          @string_marshaler ||= MarshalStrategy.find(:string)
+          do_send_response(@string_marshaler, original_message, "Exception: #{e.message}") do |reply_message|
             reply_message['qwirk:exception'] = Qwirk::RemoteException.new(e).to_hash.to_yaml
           end
         end
@@ -41,22 +44,22 @@ module Qwirk
           end
         end
 
-        def close
-          puts "in jms worker close"
-          return if @closed
-          Qwirk.logger.info "Closing JMS worker #{@worker_config.parent.name}"
+        def stop
+          puts "in jms worker stop"
+          return if @stopped
+          Qwirk.logger.info "Stopping JMS worker #{@name}"
           # Don't clobber the session before a reply
           @consumer.close if @consumer
           @session.close if @session
-          @closed = true
+          @stopped = true
         end
 
         private
 
-        def do_send_response(marshal_type, original_message, marshaled_object)
+        def do_send_response(marshaler, original_message, marshaled_object)
           return false unless original_message.reply_to
           begin
-            session.producer(:destination => original_message.reply_to) do |producer|
+            @session.producer(:destination => original_message.reply_to) do |producer|
               # For time_to_live and jms_deliver_mode, first use the local response_options if they're' set, otherwise
               # use the value from the original_message attributes if they're' set
               time_to_live = @time_to_live || original_message['qwirk:response:time_to_live']
@@ -67,16 +70,16 @@ module Qwirk
               # The reply is persistent if we explicitly set it or if we don't expire
               producer.delivery_mode_sym = persistent ? :persistent : :non_persistent
               producer.time_to_live = time_to_live.to_i if time_to_live
-              reply_message = Qwirk::QueueAdapter::JMS.create_message(session, marshaled_object, marshal_type)
+              reply_message = Qwirk::QueueAdapter::JMS.create_message(@session, marshaled_object, marshaler.marshal_type)
               reply_message.jms_correlation_id = original_message.jms_message_id
-              reply_message['qwirk:marshal'] = marshal_type.to_s
-              reply_message['qwirk:worker']  = config.name
-              reply_message['qwirk:task_id']  = message['qwirk:task_id'] if message['qwirk:task_id']
+              reply_message['qwirk:marshal']   = marshaler.to_sym.to_s
+              reply_message['qwirk:worker']    = @name
+              reply_message['qwirk:task_id']   = original_message['qwirk:task_id'] if original_message['qwirk:task_id']
               yield reply_message if block_given?
               producer.send(reply_message)
             end
           rescue Exception => e
-            Qwirk.logger.error {"Error attempting to send response: #{e.message}"}
+            Qwirk.logger.error {"Error attempting to send response: #{e.message}\n\t#{e.backtrace.join("\n\t")}"}
           end
           return true
         end

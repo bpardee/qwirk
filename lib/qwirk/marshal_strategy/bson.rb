@@ -7,6 +7,10 @@ module Qwirk
         :bytes
       end
 
+      def to_sym
+        :bson
+      end
+
       begin
         require 'bson'
         def marshal(object)
@@ -27,7 +31,7 @@ module Qwirk
         end
       end
 
-      MarshalStrategy.register(:bson => self)
+      MarshalStrategy.register(self)
     end
   end
 end

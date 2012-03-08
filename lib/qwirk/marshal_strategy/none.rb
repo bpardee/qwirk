@@ -8,6 +8,10 @@ module Qwirk
         :bytes
       end
 
+      def to_sym
+        :none
+      end
+
       def marshal(object)
         object
       end
@@ -16,8 +20,7 @@ module Qwirk
         msg
       end
 
-      MarshalStrategy.register(:none => self)
-
+      MarshalStrategy.register(self)
     end
   end
 end

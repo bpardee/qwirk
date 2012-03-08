@@ -6,7 +6,8 @@ module Qwirk
 
         #attr_reader :persistent, :marshaler, :reply_queue
 
-        def initialize(queue_name, topic_name, options, response_options)
+        def initialize(queue_adapter, queue_name, topic_name, options, response_options)
+          @connection                = queue_adapter.adapter_info
           response_options         ||= {}
           @dest_options              = {:queue_name => queue_name} if queue_name
           @dest_options              = {:topic_name => topic_name} if topic_name
@@ -19,7 +20,7 @@ module Qwirk
           # TODO: Use sync attribute so this queue isn't constantly created.
           reply_queue_name = response_options[:queue_name] || :temporary
           if response_options
-            Connection.session_pool.session do |session|
+            @connection.session_pool.session do |session|
               @reply_queue = session.create_destination(:queue_name => reply_queue_name)
             end
           end
@@ -30,14 +31,15 @@ module Qwirk
         end
 
         # Publish the given object and return the message_id.
-        def publish(marshaled_object, marshal_sym, marshal_type, task_id, props)
+        # TODO: Too hackish to include task_id in here, think of a better solution
+        def publish(marshaled_object, marshaler, task_id, props)
           message = nil
-          Connection.session_pool.producer(@dest_options) do |session, producer|
+          @connection.session_pool.producer(@dest_options) do |session, producer|
             producer.time_to_live                  = @time_to_live if @time_to_live
             producer.delivery_mode_sym             = @persistent_sym
-            message = JMS.create_message(session, marshaled_object, marshal_type)
+            message = JMS.create_message(session, marshaled_object, marshaler.marshal_type)
             message.jms_reply_to                   = @reply_queue if @reply_queue
-            message['qwirk:marshal']               = marshal_sym.to_s
+            message['qwirk:marshal']               = marshaler.to_sym.to_s
             message['qwirk:response:time_to_live'] = @response_time_to_live_str if @response_time_to_live_str
             message['qwirk:response:persistent']   = @response_persistent_str unless @response_persistent_str.nil?
             message['qwirk:task_id']               = task_id if task_id
@@ -46,26 +48,24 @@ module Qwirk
             end
             producer.send(message)
           end
+          # Return the adapter_info which for JMS is the message_id
           return message.jms_message_id
         end
 
-        # Creates a block for reading the responses for a given message_id.  The block will be passed an object
-        # that responds to read(timeout) with a [message, worker_name] pair or nil if no message is read.
-        # This is used in the RPC mechanism where a publish might wait for 1 or more workers to respond.
+        # See Qwirk::PublishHandle#read_response for the requirements for this method.
         def with_response(message_id, &block)
-          raise "Invalid call to read_response for #{@publisher}, not setup for responding" unless @reply_queue
+          raise "Invalid call to with_response for publisher to #{@dest_options.inspect}, not setup for responding" unless @reply_queue
           options = { :destination => @reply_queue, :selector => "JMSCorrelationID = '#{message_id}'" }
-          Connection.session_pool.consumer(options) do |session, consumer|
+          @connection.session_pool.consumer(options) do |session, consumer|
             yield MyConsumer.new(consumer)
           end
         end
 
-        # Creates an consumer for reading responses for a given task_id.  It will return an object that responds_to
-        # read_response which will return a [message_id, response object] and acknowledge_message which will acknowledge the
-        # last message read.  It should also respond to close which will interrupt
-        # any read_response calls causing it to return nil.
-        def create_task_consumer(task_id)
-          return MyTaskConsumer.new(@reply_queue, task_id)
+        # See Qwirk::Publisher#create_task_consumer for the requirements for this method.
+        def create_producer_consumer_pair(task_id, marshaler)
+          producer = MyTaskProducer.new(self, @reply_queue, task_id, marshaler)
+          consumer = MyTaskConsumer.new(@connection, @reply_queue, task_id)
+          return producer, consumer
         end
 
         #######
@@ -79,7 +79,7 @@ module Qwirk
             @consumer = consumer
           end
 
-          def read_response(timeout)
+          def timeout_read(timeout)
             msec = (timeout * 1000).to_i
             if msec > 100
               message = @consumer.receive(msec)
@@ -89,23 +89,39 @@ module Qwirk
             end
             return nil unless message
             message.acknowledge
-            return [JMS.parse_response(message), message['qwirk:worker']]
+            return [message.jms_correlation_id, JMS.parse_response(message), message['qwirk:worker']]
+          end
+        end
+
+        class MyTaskProducer
+          def initialize(publisher, reply_queue, task_id, marshaler)
+            @publisher   = publisher
+            @reply_queue = reply_queue
+            @task_id     = task_id
+            @marshaler   = marshaler
+          end
+
+          def send(marshaled_object)
+            @publisher.publish(marshaled_object, @marshaler, task_id, props)
+            @message = @consumer.receive
+            return nil unless @message
+            return message.jms_message_id
           end
         end
 
         class MyTaskConsumer
-          def initialize(reply_queue, task_id)
-            options = { :destination => reply_queue, :selector => "qwirk:task_id = '#{task_id}'" }
-            @session = Connection.create_session
+          def initialize(connection, reply_queue, task_id)
+            options = { :destination => reply_queue, :selector => "qwirk_task_id = '#{task_id}'" }
+            @session = connection.create_session
             @consumer = @session.consumer(options)
             @session.start
             @closed = false
           end
 
-          def read_response
+          def receive
             @message = @consumer.receive
             return nil unless @message
-            return [message.jms_correlation_id, JMS.parse_respone(message)]
+            return [@message.jms_correlation_id, JMS.parse_respone(@message)]
           end
 
           def acknowledge_message

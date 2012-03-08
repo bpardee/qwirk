@@ -133,14 +133,14 @@ module Qwirk
     # From an InMem perspective, we don't want the workers stopping until all messages in the queue have been processed.
     # Therefore we want to stop the
     def stop
-      puts "In base worker stop"
+      puts "#{self}: In base worker stop"
       @status  = 'Stopping'
       @stopped = true
       @processing_mutex.synchronize do
         # This should interrupt @adapter.receive_message above and cause it to return nil
-        @adapter.close
+        @adapter.stop
       end
-      puts "base worker stop complete"
+      puts "#{self}: base worker stop complete"
     end
 
     def perform(object)
@@ -177,7 +177,7 @@ module Qwirk
               @adapter.acknowledge_message(msg)
             end
           end
-          Qwirk.logger.info {"#{self}::on_message (#{'%.1f' % delta}ms)"} if Qwirk::QueueAdapter::JMS::Connection.log_times?
+          Qwirk.logger.info {"#{self}::on_message (#{'%.1f' % delta}ms)"} if self.config.log_times
           Qwirk.logger.flush if Qwirk.logger.respond_to?(:flush)
         end
       end
@@ -187,7 +187,8 @@ module Qwirk
       Qwirk.logger.error "#{self}: Exception, thread terminating: #{e.message}\n\t#{e.backtrace.join("\n\t")}"
     ensure
       @status = 'Stopped'
-      @adapter.close
+      # TODO: necessary?
+      @adapter.stop
       Qwirk.logger.flush if Qwirk.logger.respond_to?(:flush)
       config.worker_stopped(self)
     end

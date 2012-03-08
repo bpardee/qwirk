@@ -7,6 +7,10 @@ module Qwirk
         :text
       end
 
+      def to_sym
+        :yaml
+      end
+
       def marshal(object)
         object.to_yaml
       end
@@ -15,8 +19,7 @@ module Qwirk
         ::YAML.load(msg)
       end
 
-      MarshalStrategy.register(:yaml => self)
-
+      MarshalStrategy.register(self)
     end
   end
 end

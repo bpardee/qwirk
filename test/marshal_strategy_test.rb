@@ -17,6 +17,10 @@ module SpockMarshalStrategy
     :text
   end
 
+  def self.to_sym
+    :spock
+  end
+
   # Change days to hours
   def self.marshal(i)
     (i.to_i * 24).to_s
@@ -31,7 +35,7 @@ end
 class MarshalStrategyTest < Test::Unit::TestCase
   context '' do
     setup do
-      Qwirk::MarshalStrategy.register(:spock => SpockMarshalStrategy)
+      Qwirk::MarshalStrategy.register(SpockMarshalStrategy)
 
       @bson   = Qwirk::MarshalStrategy.find(:bson)
       @json   = Qwirk::MarshalStrategy.find(:json)

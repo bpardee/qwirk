@@ -1,8 +1,8 @@
 # Protocol independent class to handle Publishing
 module Qwirk
   class Publisher
-    #attr_reader :producer_options, :persistent, :marshaler, :reply_queue
-    attr_reader :response_options, :adapter
+    #attr_reader :producer_options, :persistent, :reply_queue
+    attr_reader :response_options, :adapter, :marshaler
 
     # Parameters:
     #   One of the following must be specified
@@ -15,7 +15,7 @@ module Qwirk
     #     :response              => if true or a hash of response options, a temporary reply queue will be setup for handling responses
     #       :time_to_live        => expiration time in ms for the response message(s) (JMS))
     #       :persistent          => true or false for the response message(s), set to false if you don't want timed out messages ending up in the DLQ (defaults to true unless time_to_live is set)
-    def initialize(options)
+    def initialize(queue_adapter, options)
       options = options.dup
       @queue_name = options.delete(:queue_name)
       @topic_name = options.delete(:topic_name)
@@ -25,21 +25,25 @@ module Qwirk
       # response_options should only be a hash or the values true or false
       @response_options = {} if @response_options && !@response_options.kind_of?(Hash)
 
-      @adapter          = QueueAdapter.create_publisher(@queue_name, @topic_name, options, @response_options)
-      @marshal_sym      = options[:marshal] || :ruby
-      @marshaler        = Qwirk::MarshalStrategy.find(@marshal_sym)
+      @adapter          = queue_adapter.create_publisher(@queue_name, @topic_name, options, @response_options)
+      marshal_sym       = options[:marshal] || :ruby
+      @marshaler        = Qwirk::MarshalStrategy.find(marshal_sym)
     end
 
     # Publish the given object to the address.
-    def publish(object, task_id=nil, props={})
+    def publish(object, props={})
       start = Time.now
       marshaled_object = @marshaler.marshal(object)
-      message_id = @adapter.publish(marshaled_object, @marshal_sym, @marshaler.marshal_type, task_id, props)
-      return PublishHandle.new(self, message_id, start)
+      adapter_info = @adapter.publish(marshaled_object, @marshaler, nil, props)
+      return PublishHandle.new(self, adapter_info, start)
     end
 
-    def create_task_consumer(task_id)
-      @adapter.create_task_consumer.task_id
+    # Creates a producer/consumer pair for writing and reading responses for a given task_id.  It will return a pair of
+    # [producer, consumer].  The producer will publish objects specifically for the task.  The consumer is an object that responds_to
+    # receive which will return a [message_id, response object] and acknowledge_message which will acknowledge the
+    # last message read.  It should also respond to close which will interrupt any receive calls causing it to return nil.
+    def create_producer_consumer_pair(task_id)
+      @adapter.create_producer_consumer_pair(task_id, @marshaler)
     end
 
     def to_s

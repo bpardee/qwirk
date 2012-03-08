@@ -10,11 +10,6 @@ require 'logger'
 
 #Qwirk.logger = Logger.new($stdout)
 
-qwirk_file = File.expand_path('../qwirk_persist.yml', __FILE__)
-if File.exist?(qwirk_file)
-  config = YAML.load(ERB.new(File.read(qwirk_file)).result(binding))
-  Qwirk::QueueAdapter::JMS::Connection.init(config)
-  Qwirk::QueueAdapter.set(:jms)
-else
-  Qwirk::QueueAdapter.set(:in_mem)
-end
+qwirk_file = File.expand_path('../qwirk.yml', __FILE__)
+config = YAML.load(ERB.new(File.read(qwirk_file)).result(binding))
+$adapter = Qwirk::Adapter.new(config[ENV['QWIRK_ADAPTER'] || 'in_mem'])

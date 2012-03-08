@@ -12,12 +12,14 @@ class Publisher
       [ :sleep_time,   :float,   "Time between publishing and receiving where we're supposedly working", 2.0     ]
   ]
 
-  @@publisher = Qwirk::Publisher.new(:topic_name => 'test_string', :response => true, :marshal => :string)
+  def initialize(adapter)
+    @publisher = Qwirk::Publisher.new(adapter, :topic_name => 'test_string', :response => true, :marshal => :string)
+  end
 
   def publish(message, timeout, sleep_time)
     @messages = {}
     puts "Publishing at #{Time.now.to_f}"
-    handle = @@publisher.publish(message)
+    handle = @publisher.publish(message)
     sleep sleep_time
 
     handle.read_response(timeout) do |response|

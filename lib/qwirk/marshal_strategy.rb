@@ -39,10 +39,10 @@ module Qwirk
     end
 
     # Allow user-defined marshal strategies
-    def self.register(hash)
-      hash.each do |key, marshaler|
+    def self.register(*marshalers)
+      marshalers.each do |marshaler|
         raise "Invalid marshal strategy: #{marshaler}" unless valid?(marshaler)
-        @options[key] = marshaler
+        @options[marshaler.to_sym] = marshaler
       end
     end
 
@@ -52,6 +52,7 @@ module Qwirk
 
     def self.valid?(marshaler)
       return marshaler.respond_to?(:marshal_type) &&
+          marshaler.respond_to?(:to_sym) &&
           marshaler.respond_to?(:marshal) &&
           marshaler.respond_to?(:unmarshal)
     end

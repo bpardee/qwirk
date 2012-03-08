@@ -4,7 +4,7 @@ module Qwirk
   class WorkerConfig
     include Rumx::Bean
 
-    attr_reader        :name, :marshal_type, :marshaler
+    attr_reader        :name, :marshaler
 
     bean_reader        :count,               :integer, 'Current number of workers'
     bean_attr_accessor :min_count,           :integer, 'Min number of workers allowed', :config_item => true
@@ -14,6 +14,7 @@ module Qwirk
     # The adapter refers to the corresponding class in Qwirk::QueueAdapter::<type>::WorkerConfig
     bean_attr_reader   :adapter,             :bean,    'Adapter for worker queue interface'
     bean_attr_reader   :timer,               :bean,    'Track the times for this worker'
+    bean_attr_accessor :log_times,           :boolean, 'Log the times for this worker'
 
     # Define the default config values for the attributes all workers will share.  These will be sent as options to the constructor
     def self.initial_default_config
@@ -21,24 +22,24 @@ module Qwirk
     end
 
     # Create new WorkerConfig to manage workers of a common class
-    def initialize(name, manager, worker_class, options)
+    def initialize(queue_adapter, name, manager, worker_class, options)
+      @name             = name
+      @manager          = manager
+      @worker_class     = worker_class
       @workers          = []
-      @status           = 'Idle'
       @stopped          = false
       @min_count        = 0
       @max_count        = 0
-      @name             = name
       @index_count      = 0
       @index_mutex      = Mutex.new
-      @manager          = manager
-      @worker_class     = worker_class
       @worker_mutex     = Mutex.new
       @worker_condition = ConditionVariable.new
       response_options  = worker_class.queue_options[:response] || {}
-      @adapter          = QueueAdapter.create_worker_config(self, worker_class.queue_name(@name), worker_class.topic_name, worker_class.queue_options, response_options)
+      @adapter          = queue_adapter.create_worker_config(self, worker_class.queue_name(@name), worker_class.topic_name, worker_class.queue_options, response_options)
       # Defines how we will marshal the response
-      @marshal_type     = (response_options[:marshal] || @adapter.default_marshal_type).to_s
-      @marshaler        = MarshalStrategy.find(@marshal_type)
+      marshal_sym       = (response_options[:marshal] || @adapter.default_marshal_sym)
+      @marshaler        = MarshalStrategy.find(marshal_sym)
+      @log_times        = queue_adapter.log_times
 
       #Qwirk.logger.debug { "options=#{options.inspect}" }
       options.each do |key, value|
@@ -70,6 +71,7 @@ module Qwirk
       raise "#{@worker_class.name}-#{@name}: Can't change count since we've been stopped" if @stopped
       Qwirk.logger.info "#{@worker_class.name}: Changing max number of workers from #{@max_count} to #{new_max_count}"
       self.min_count = new_max_count if @min_count > new_max_count
+      @min_count = 1 if @min_count == 0 && new_max_count > 0
       @worker_mutex.synchronize do
         @timer ||= Rumx::Beans::TimerAndError.new
         if @workers.size > new_max_count
@@ -118,9 +120,10 @@ module Qwirk
     def periodic_call(poll_time)
       now = Time.now
       add_new_worker = true
-      stop_count = 0
+      worker_stopped = false
       @worker_mutex.synchronize do
-        @workers.each do |worker|
+        # reverse_each to remove later workers first
+        @workers.reverse_each do |worker|
           start_worker_time = worker.start_worker_time
           start_read_time = worker.start_read_time
           if !start_read_time || (now - start_worker_time) < (poll_time + @max_read_threshold)
@@ -131,9 +134,9 @@ module Qwirk
           end_read_time = worker.start_processing_time
           # If the processing time is actually from the previous processing, then we're probably still waiting for the read to complete.
           if !end_read_time || end_read_time < start_read_time
-            if (@workers.size - stop_count) > @min_count && (now - start_read_time) > @idle_worker_timeout
+            if !worker_stopped && @workers.size > @min_count && (now - start_read_time) > @idle_worker_timeout
               worker.stop
-              stop_count += 1
+              worker_stopped = true
             end
             end_read_time = now
           end
@@ -155,7 +158,7 @@ module Qwirk
       worker.start(@index_count, self)
       Qwirk.logger.debug {"#{self}: Adding worker #{worker}"}
       @index_mutex.synchronize { @index_count += 1 }
-      @@workers << worker
+      @workers << worker
     end
 
     def remove_worker(worker)

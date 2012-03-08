@@ -19,10 +19,10 @@ class Publisher
       [ :sleep_time, :float,   'Time to sleep between messages',        0.5                ]
   ]
 
-  @@s1_publisher = Qwirk::Publisher.new(:queue_name => 'S1', :marshal => :bson)
-  @@s2_publisher = Qwirk::Publisher.new(:queue_name => 'S2', :marshal => :string)
 
-  def initialize
+  def initialize(adapter)
+    @s1_publisher = Qwirk::Publisher.new(adapter, :queue_name => 'S1', :marshal => :bson)
+    @s2_publisher = Qwirk::Publisher.new(adapter, :queue_name => 'S2', :marshal => :string)
     @s1_count = 0
     @s2_count = 0
   end
@@ -32,7 +32,7 @@ class Publisher
       @s1_count += 1
       obj = {'count' => @s1_count, 'message' => message}
       puts "Publishing to S1 object: #{obj.inspect}"
-      @@s1_publisher.publish(obj)
+      @s1_publisher.publish(obj)
       sleep sleep_time
     end
   end
@@ -42,7 +42,7 @@ class Publisher
       @s2_count += 1
       obj = "#{@s2_count}: #{message}"
       puts "Publishing to S2 object: #{obj}"
-      @@s2_publisher.publish(obj)
+      @s2_publisher.publish(obj)
       sleep sleep_time
     end
   end

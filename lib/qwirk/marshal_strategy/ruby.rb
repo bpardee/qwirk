@@ -7,6 +7,10 @@ module Qwirk
         :bytes
       end
 
+      def to_sym
+        :ruby
+      end
+
       def marshal(object)
         ::Marshal.dump(object)
       end
@@ -16,8 +20,7 @@ module Qwirk
         ::Marshal.load(msg)
       end
 
-      MarshalStrategy.register(:ruby => self)
-      
+      MarshalStrategy.register(self)
     end
   end
 end

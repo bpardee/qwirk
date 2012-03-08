@@ -14,10 +14,11 @@ module Qwirk
         end
 
         def receive_message
-          @queue.read(self)
+          message, @reply_queue = @queue.read(self)
+          return message
         end
 
-        def acknowledge_message(msg)
+        def acknowledge_message(message)
         end
 
         def send_response(original_message, marshaled_object)
@@ -41,22 +42,18 @@ module Qwirk
         end
 
         def stop
+          return if @stopped
           @stopped = true
-        end
-
-        def close
-          return if @closed
-          Qwirk.logger.debug { "Closing #{self}" }
-          @closed = true
+          Qwirk.logger.debug { "Stopping #{self}" }
+          @queue.interrupt_read
         end
 
         ## End of required override methods for worker adapter
         private
 
         def do_send_response(original_message, object)
-          reply_queue = Factory.find_reply_queue(@queue_name, @topic_name, original_message.object_id)
-          return unless reply_queue
-          reply_queue.write_response(object, @name)
+          return unless @reply_queue
+          @reply_queue.write([original_message.object_id, object, @name])
           return true
         end
       end

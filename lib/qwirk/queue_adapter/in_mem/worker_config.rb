@@ -7,21 +7,21 @@ module Qwirk
       class WorkerConfig
         include Rumx::Bean
 
-        bean_reader :queue_name,     :string,  'Name of the queue'
-        bean_reader :queue_size,     :integer, 'Current count of messages in the queue'
-        bean_reader :queue_max_size, :integer, 'Max messages allowed in the queue'
+        bean_reader   :queue_name,     :string,  'Name of the queue'
+        bean_reader   :queue_size,     :integer, 'Current count of messages in the queue'
+        bean_accessor :queue_max_size, :integer, 'Max messages allowed in the queue'
 
-        attr_reader :stopped
+        attr_reader   :stopped
 
-        def initialize(parent, queue_name, topic_name, options, response_options)
+        def initialize(queue_adapter, parent, queue_name, topic_name, options, response_options)
           @parent = parent
           @queue_name = queue_name
           @topic_name = topic_name
-          @queue_max_size = options[:queue_max_size] || 100
-          @queue = Factory.get_worker_queue(parent.name, queue_name, topic_name, @queue_max_size)
+          queue_max_size = options[:queue_max_size] || 100
+          @queue = Factory.get_worker_queue(parent.name, queue_name, topic_name, queue_max_size)
         end
 
-        def default_marshal_type
+        def default_marshal_sym
           :none
         end
 
@@ -48,6 +48,10 @@ module Qwirk
 
         def queue_max_size
           @queue.max_size
+        end
+
+        def queue_max_size=(max_size)
+          @queue.max_size = max_size
         end
       end
     end

@@ -2,10 +2,10 @@ require 'timeout'
 
 module Qwirk
   class PublishHandle
-    def initialize(publisher, message_id, start)
-      @publisher  = publisher
-      @message_id = message_id
-      @start      = start
+    def initialize(publisher, adapter_info, start)
+      @producer    = publisher
+      @adapter_info = adapter_info
+      @start        = start
     end
 
     # Waits the given timeout for a response message on the queue.
@@ -50,8 +50,11 @@ module Qwirk
     # specified handlers either return, timeout, or return an exception.
     #
     def read_response(timeout, &block)
-      raise "Invalid call to read_response for #{@publisher}, not setup for responding" unless @publisher.response_options
-      @publisher.adapter.with_response(@message_id) do |consumer|
+      raise "Invalid call to read_response for #{@producer}, not setup for responding" unless @producer.response_options
+      # Creates a block for reading the responses for a given message_id (adapter_info).  The block will be passed an object
+      # that responds to timeout_read(timeout) with a [original_message_id, response_message, worker_name] tri or nil if no message is read.
+      # This is used in the RPC mechanism where a publish might wait for 1 or more workers to respond.
+      @producer.adapter.with_response(@adapter_info) do |consumer|
         if block_given?
           return read_multiple_response(consumer, timeout, &block)
         else
@@ -68,7 +71,7 @@ module Qwirk
 
     def read_single_response(consumer, timeout)
       leftover_timeout = @start + timeout - Time.now
-      response, @worker_name = consumer.read_response(leftover_timeout)
+      message_id, response, @worker_name = consumer.timeout_read(leftover_timeout)
       return response
     end
 

@@ -1,5 +1,1 @@
-If you want to use the default InMem adapter, you don't need to do anything
-to run the examples.  If you want to run the JMS adapter, copy the jms.yml.template
-file to jms.yml and modify it as needed (or set the environment variable
-ACTIVEMQ_HOME to the correct value).  Refer to the jruby-jms project for
-more options for the jms.yml file.
+Modify the qwirk.yml file to setup the proper credentials for you ActiveMQ server.

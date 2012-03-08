@@ -7,6 +7,10 @@ module Qwirk
         :text
       end
 
+      def to_sym
+        :string
+      end
+
       def marshal(object)
         object.to_s
       end
@@ -15,8 +19,7 @@ module Qwirk
         msg
       end
 
-      MarshalStrategy.register(:string => self)
-
+      MarshalStrategy.register(self)
     end
   end
 end

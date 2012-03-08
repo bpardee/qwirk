@@ -20,7 +20,7 @@ module Qwirk
     #     production, a set of workers could be defined under production or specific workers for each host name.
     #   persist_file - WorkerConfig attributes that are modified externally (via Rumx interface) will be stored in this file.  Without this
     #     option, external config changes that are made will be lost when the Manager is restarted.
-    def initialize(options={})
+    def initialize(queue_adapter, options={})
       @stopped          = false
       @name             = options[:name] || Qwirk::DEFAULT_NAME
       @poll_time        = 3.0
@@ -37,7 +37,7 @@ module Qwirk
           # Least priority is config options defined in the Worker class, then the workers.yml file, highest priority is persist_file (ad-hoc changes made manually)
           options = options.merge(@worker_options[config_name]) if @worker_options[config_name]
           options = options.merge(@persist_options[config_name]) if @persist_options[config_name]
-          worker_config = worker_config_class.new(config_name, self, worker_class, options)
+          worker_config = worker_config_class.new(queue_adapter, config_name, self, worker_class, options)
           bean_add_child(config_name, worker_config)
           @worker_configs << worker_config
         end
@@ -51,11 +51,15 @@ module Qwirk
     def start_timer_thread
       # TODO: Optionize hard-coded values
       @timer_thread = Thread.new do
-        while !@stopped
-          @worker_configs.each do |worker_config|
-            worker_config.periodic_call(@poll_time)
+        begin
+          while !@stopped
+            @worker_configs.each do |worker_config|
+              worker_config.periodic_call(@poll_time)
+            end
+            sleep @poll_time
           end
-          sleep @poll_time
+        rescue Exception => e
+          Qwirk.logger.error "Timer thread failed with exception: #{e.message}\n\t#{e.backtrace.join("\n\t")}"
         end
       end
     end
