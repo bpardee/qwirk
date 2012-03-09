@@ -41,7 +41,7 @@ module Qwirk
     # Creates a producer/consumer pair for writing and reading responses for a given task_id.  It will return a pair of
     # [producer, consumer].  The producer will publish objects specifically for the task.  The consumer is an object that responds_to
     # receive which will return a [message_id, response object] and acknowledge_message which will acknowledge the
-    # last message read.  It should also respond to close which will interrupt any receive calls causing it to return nil.
+    # last message read.  It should also respond to stop which will interrupt any receive calls causing it to return nil.
     def create_producer_consumer_pair(task_id)
       @adapter.create_producer_consumer_pair(task_id, @marshaler)
     end

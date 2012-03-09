@@ -13,7 +13,7 @@ Gem::Specification.new do |s|
   # $platform global variable. In all other cases, we figure it out from RUBY_PLATFORM.
   s.platform = $platform || RUBY_PLATFORM[/java/] || 'ruby'
 
-  s.add_dependency 'jruby-jms', ['>= 0.11.2'] if spec.platform.to_s == 'java'
+  s.add_dependency 'jruby-jms', ['>= 0.11.2'] if s.platform.to_s == 'java'
   s.add_dependency 'gene_pool', ['>= 1.2.0']
   s.add_dependency 'rumx'
   s.add_dependency 'rack'

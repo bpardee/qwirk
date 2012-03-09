@@ -72,9 +72,9 @@ module Qwirk
               producer.time_to_live = time_to_live.to_i if time_to_live
               reply_message = Qwirk::QueueAdapter::JMS.create_message(@session, marshaled_object, marshaler.marshal_type)
               reply_message.jms_correlation_id = original_message.jms_message_id
-              reply_message['qwirk:marshal']   = marshaler.to_sym.to_s
-              reply_message['qwirk:worker']    = @name
-              reply_message['qwirk:task_id']   = original_message['qwirk:task_id'] if original_message['qwirk:task_id']
+              reply_message['qwirk:marshal'] = marshaler.to_sym.to_s
+              reply_message['qwirk:worker']  = @name
+              reply_message['QwirkTaskID']   = original_message['QwirkTaskID'] if original_message['QwirkTaskID']
               yield reply_message if block_given?
               producer.send(reply_message)
             end

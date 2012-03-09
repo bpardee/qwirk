@@ -1,4 +1,3 @@
-
 module Qwirk
   module QueueAdapter
     module InMem
@@ -22,6 +21,7 @@ module Qwirk
             reply_queue = ReplyQueue.new("#{@queue}:#{object.to_s}")
           end
           @queue.write([object, reply_queue])
+          # Return the object to get sent to with_response below.
           return reply_queue
         end
 
@@ -36,7 +36,7 @@ module Qwirk
           consumer_queue = Queue.new("#{@queue}:#{task_id}")
           consumer_queue.max_size = @response_options[:queue_max_size] || 100
           producer = MyTaskProducer.new(@queue, consumer_queue, marshaler, @response_options)
-          consumer  = MyTaskConsumer.new(consumer_queue)
+          consumer  = MyTaskConsumer.new(@queue, consumer_queue)
           return producer, consumer
         end
 
@@ -58,13 +58,16 @@ module Qwirk
         end
 
         class MyTaskConsumer
-          def initialize(consumer_queue)
+          attr_reader :stopped
+
+          def initialize(producer_queue, consumer_queue)
+            @producer_queue = producer_queue
             @consumer_queue = consumer_queue
-            @closed = false
+            @stopped = false
           end
 
           def receive
-            message_id, response, worker_name = @consumer_queue.read
+            message_id, response, worker_name = @consumer_queue.read(self)
             return nil unless response
             return [message_id, response]
           end
@@ -72,12 +75,12 @@ module Qwirk
           def acknowledge_message
           end
 
-          def close
-            return if @closed
-            Qwirk.logger.info "Closing Task worker #{@worker_config.parent.name}"
+          def stop
+            return if @stopped
+            Qwirk.logger.info "Stopping Task worker #{@consumer_queue}"
             # Don't clobber the session before a reply
             @producer_queue.interrupt_read
-            @closed = true
+            @stopped = true
           end
         end
       end

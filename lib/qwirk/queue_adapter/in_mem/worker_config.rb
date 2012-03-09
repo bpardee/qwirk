@@ -11,7 +11,7 @@ module Qwirk
         bean_reader   :queue_size,     :integer, 'Current count of messages in the queue'
         bean_accessor :queue_max_size, :integer, 'Max messages allowed in the queue'
 
-        attr_reader   :stopped
+        attr_reader   :stopped, :parent
 
         def initialize(queue_adapter, parent, queue_name, topic_name, options, response_options)
           @parent = parent

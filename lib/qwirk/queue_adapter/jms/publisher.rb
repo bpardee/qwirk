@@ -42,13 +42,13 @@ module Qwirk
             message['qwirk:marshal']               = marshaler.to_sym.to_s
             message['qwirk:response:time_to_live'] = @response_time_to_live_str if @response_time_to_live_str
             message['qwirk:response:persistent']   = @response_persistent_str unless @response_persistent_str.nil?
-            message['qwirk:task_id']               = task_id if task_id
+            message['QwirkTaskID']                 = task_id if task_id
             props.each do |key, value|
               message.send("#{key}=", value)
             end
             producer.send(message)
           end
-          # Return the adapter_info which for JMS is the message_id
+          # Return the adapter_info which for JMS is the message_id.  This value will be sent to with_response below.
           return message.jms_message_id
         end
 
@@ -102,39 +102,38 @@ module Qwirk
           end
 
           def send(marshaled_object)
-            @publisher.publish(marshaled_object, @marshaler, task_id, props)
-            @message = @consumer.receive
-            return nil unless @message
-            return message.jms_message_id
+            @publisher.publish(marshaled_object, @marshaler, @task_id, {})
           end
         end
 
         class MyTaskConsumer
+          attr_reader :stopped
+
           def initialize(connection, reply_queue, task_id)
-            options = { :destination => reply_queue, :selector => "qwirk_task_id = '#{task_id}'" }
+            @options = { :destination => reply_queue, :selector => "QwirkTaskID = '#{task_id}'" }
             @session = connection.create_session
-            @consumer = @session.consumer(options)
+            @consumer = @session.consumer(@options)
             @session.start
-            @closed = false
+            @stopped = false
           end
 
           def receive
             @message = @consumer.receive
             return nil unless @message
-            return [@message.jms_correlation_id, JMS.parse_respone(@message)]
+            return [@message.jms_correlation_id, JMS.parse_response(@message)]
           end
 
           def acknowledge_message
             @message.acknowledge
           end
 
-          def close
-            return if @closed
-            Qwirk.logger.info "Closing Task worker #{@worker_config.parent.name}"
+          def stop
+            return if @stopped
+            Qwirk.logger.info "Stopping Task consumer for #{@options.inspect}"
             # Don't clobber the session before a reply
             @consumer.close if @consumer
             @session.close if @session
-            @closed = true
+            @stopped = true
           end
         end
       end

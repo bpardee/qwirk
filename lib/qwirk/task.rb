@@ -23,16 +23,24 @@ module Qwirk
   #     :
   module Task
     #include Qwirk::BaseWorker
+    include Rumx::Bean
+
+    bean_attr_accessor :max_pending_records, :integer, 'The max number of records published that have not been responded to yet.'
+    bean_attr_reader   :task_id,             :string,  'The ID for this task'
+    bean_attr_reader   :success_count,       :integer, 'The number of successful responses'
+    bean_attr_reader   :exception_count,     :integer, 'The number of exception responses'
+    bean_attr_reader   :total_count,         :integer, 'The total expected records to be published (optional)'
 
     module ClassMethods
     end
 
     def self.included(base)
       #Qwirk::BaseWorker.included(base)
+      Rumx::Bean.included(base)
       base.extend(ClassMethods)
     end
 
-    def initialize(publisher, task_id, opts={})
+    def initialize(publisher, task_id, total_count, opts={})
       @publisher              = publisher
       @pending_hash           = Hash.new
       @pending_hash_mutex     = Mutex.new
@@ -41,6 +49,9 @@ module Qwirk
       @stopped                = false
       @finished_publishing    = false
       @max_pending_records    = opts[:max_pending_records] || 100
+      @success_count          = 0
+      @exception_count        = 0
+      @total_count            = total_count
 
       @producer, @consumer   = publisher.create_producer_consumer_pair(@task_id)
       @reply_thread = Thread.new do
@@ -100,7 +111,7 @@ module Qwirk
 
     def do_stop
       return if @stopped
-      @consumer.close if @consumer
+      @consumer.stop if @consumer
       @stopped = true
     end
 
@@ -111,13 +122,15 @@ module Qwirk
           unless @stopped
             request = @pending_hash.delete(message_id)
             if request
-              if response.kind_of(RemoteException)
+              if response.kind_of?(RemoteException)
                 on_exception(request, response)
+                @exception_count += 1
               else
                 on_response(request, response)
+                @success_count += 1
               end
               do_stop if @finished_publishing && @pending_hash.empty?
-              @worker_condition.signal
+              @pending_hash_condition.signal
             else
               Qwirk.logger.warn("#{self}: Read unexpected response with message_id=#{message_id}")
             end

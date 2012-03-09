@@ -14,7 +14,7 @@ module Qwirk
           @outstanding_hash_mutex = Mutex.new
           @read_condition         = ConditionVariable.new
           @write_condition        = ConditionVariable.new
-          @close_condition        = ConditionVariable.new
+          @stop_condition         = ConditionVariable.new
           @array                  = []
           @stopped                = false
         end
@@ -28,7 +28,7 @@ module Qwirk
           @outstanding_hash_mutex.synchronize do
             @write_condition.broadcast
             until @array.empty?
-              @close_condition.wait(@outstanding_hash_mutex)
+              @stop_condition.wait(@outstanding_hash_mutex)
             end
             @read_condition.broadcast
           end
@@ -53,7 +53,7 @@ module Qwirk
             return if stoppable.stopped
             # We're not persistent, so even though we're stopped we're going to allow our stoppables to keep reading until the queue's empty
             unless @array.empty?
-              @close_condition.signal
+              @stop_condition.signal
               return @array.shift
             end
           end
