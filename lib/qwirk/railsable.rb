@@ -26,26 +26,6 @@ module Qwirk
           end
         end
 
-      else
-        Rails.logger.info "Messaging disabled"
-        @is_jms_enabled = false
-        worker_file     = File.join(Rails.root, "config", "workers.yml")
-        worker_pools = []
-        Qwirk::Manager.parse_worker_file(worker_file, @env) do |klass, count, options|
-          # Create a pool for each worker so a single instance won't have to be thread safe when multiple http request hit it concurrently.
-          worker_pools << GenePool.new(:pool_size => count, :logger => Rails.logger) do
-            klass.new(options)
-          end
-        end
-        # If no config, then just create a worker_pool for each class in the app/workers directory
-        if worker_pools.empty?
-          worker_pools = rails_workers.map do |klass|
-            GenePool.new(:pool_size => 1, :logger => Rails.logger) do
-              klass.new({})
-            end
-          end
-        end
-        Qwirk::QueueAdapter::JMS::Publisher.setup_dummy_publishing(worker_pools)
       end
     end
 
@@ -55,10 +35,9 @@ module Qwirk
       raise 'Messaging is not enabled, modify your config/jms.yml file' unless @is_jms_enabled
       default_config = {
           :persist_file    => File.join(Rails.root, "log", "qwirk_persist.yml"),
-          :worker_file     => File.join(Rails.root, "config", "workers.yml"),
+          :worker_file     => File.join(Rails.root, "config", "qwirk_workers.yml"),
           :stop_on_signal  => true,
           :env             => @env,
-          :allowed_workers => rails_workers,
       }
 
       return Qwirk::Manager.new(default_config.merge(manager_config))
@@ -77,10 +56,6 @@ module Qwirk
 
     def config
       @config
-    end
-    
-    def jms_enabled?
-      @is_jms_enabled
     end
   end
 end

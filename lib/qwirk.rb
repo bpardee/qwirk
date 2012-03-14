@@ -20,4 +20,15 @@ module Qwirk
   extend Qwirk::Railsable
 
   DEFAULT_NAME = 'Qwirk'
+
+  @@config = nil
+  @@hash   = {}
+
+  def self.config=(config)
+    @@config = config
+  end
+
+  def self.[](key)
+    @@hash[key] ||= Qwirk::Adapter.new(@@config[key])
+  end
 end

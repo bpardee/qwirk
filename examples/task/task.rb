@@ -4,8 +4,8 @@ require 'qwirk'
 class Task
   include Qwirk::Task
 
-  def initialize(adapter, task_id, total_count, message, sleep_time, output_file)
-    publisher = Qwirk::Publisher.new(adapter, :queue_name => 'Foo', :marshal => :bson, :response => {:time_to_live => 10000, :marshal => :string})
+  def initialize(adapter_key, task_id, total_count, message, sleep_time, output_file)
+    publisher = Qwirk[adapter_key].create_publisher(:queue_name => 'Foo', :marshal => :bson, :persistent => false, :response => {:time_to_live => 10000, :marshal => :string})
     super(publisher, task_id, total_count)
     @out = File.open(output_file, 'w')
     (1..total_count).each do |i|

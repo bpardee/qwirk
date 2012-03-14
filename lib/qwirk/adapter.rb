@@ -21,11 +21,19 @@ module Qwirk
       @worker_config_klass = namespace.const_get('WorkerConfig')
     end
 
-    def create_publisher(queue_name, topic_name, options, response_options)
+    def create_publisher(options={})
+      Publisher.new(self, options)
+    end
+
+    def create_manager(options={})
+      Manager.new(self, options)
+    end
+
+    def create_adapter_publisher(queue_name, topic_name, options, response_options)
       @publisher_klass.new(self, queue_name, topic_name, options, response_options)
     end
 
-    def create_worker_config(parent, queue_name, topic_name, options, response_options)
+    def create_adapter_worker_config(parent, queue_name, topic_name, options, response_options)
       @worker_config_klass.new(self, parent, queue_name, topic_name, options, response_options)
     end
 

@@ -35,7 +35,7 @@ module Qwirk
       @worker_mutex     = Mutex.new
       @worker_condition = ConditionVariable.new
       response_options  = worker_class.queue_options[:response] || {}
-      @adapter          = queue_adapter.create_worker_config(self, worker_class.queue_name(@name), worker_class.topic_name, worker_class.queue_options, response_options)
+      @adapter          = queue_adapter.create_adapter_worker_config(self, worker_class.queue_name(@name), worker_class.topic_name, worker_class.queue_options, response_options)
       # Defines how we will marshal the response
       marshal_sym       = (response_options[:marshal] || @adapter.default_marshal_sym)
       @marshaler        = MarshalStrategy.find(marshal_sym)

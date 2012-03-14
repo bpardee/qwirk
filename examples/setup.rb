@@ -4,12 +4,10 @@ $LOAD_PATH.unshift File.dirname(__FILE__) + '/../lib'
 require 'rubygems'
 require 'qwirk'
 require 'rumx'
-require 'erb'
 require 'yaml'
 require 'logger'
 
 #Qwirk.logger = Logger.new($stdout)
 
-qwirk_file = File.expand_path('../qwirk.yml', __FILE__)
-config = YAML.load(ERB.new(File.read(qwirk_file)).result(binding))
-$adapter = Qwirk::Adapter.new(config[ENV['QWIRK_ADAPTER'] || 'in_mem'])
+Qwirk.config = YAML.load(File.read(File.expand_path('../qwirk.yml', __FILE__)))
+$adapter_key = ENV['QWIRK_ADAPTER'] || 'in_mem'

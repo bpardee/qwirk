@@ -25,7 +25,7 @@ module Qwirk
       # response_options should only be a hash or the values true or false
       @response_options = {} if @response_options && !@response_options.kind_of?(Hash)
 
-      @adapter          = queue_adapter.create_publisher(@queue_name, @topic_name, options, @response_options)
+      @adapter          = queue_adapter.create_adapter_publisher(@queue_name, @topic_name, options, @response_options)
       marshal_sym       = options[:marshal] || :ruby
       @marshaler        = Qwirk::MarshalStrategy.find(marshal_sym)
     end
