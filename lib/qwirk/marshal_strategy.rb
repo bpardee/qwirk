@@ -38,11 +38,19 @@ module Qwirk
       @options.has_key?(marshaler.to_sym)
     end
 
-    # Allow user-defined marshal strategies
+    # Allow user-defined marshal strategies.  It can either be passed a hash of sym => marshaler or a list of marshalers
+    # that define the to_sym method which will be used as the key.
     def self.register(*marshalers)
-      marshalers.each do |marshaler|
-        raise "Invalid marshal strategy: #{marshaler}" unless valid?(marshaler)
-        @options[marshaler.to_sym] = marshaler
+      if marshalers.size == 1 && marshalers[0].kind_of?(Hash)
+        marshalers[0].each do |key, marshaler|
+          raise "Invalid marshal strategy: #{marshaler}" unless valid?(marshaler)
+          @options[key] = marshaler
+        end
+      else
+        marshalers.each do |marshaler|
+          raise "Invalid marshal strategy: #{marshaler}" unless valid?(marshaler) && marshaler.respond_to?(:to_sym)
+          @options[marshaler.to_sym] = marshaler
+        end
       end
     end
 
@@ -52,7 +60,6 @@ module Qwirk
 
     def self.valid?(marshaler)
       return marshaler.respond_to?(:marshal_type) &&
-          marshaler.respond_to?(:to_sym) &&
           marshaler.respond_to?(:marshal) &&
           marshaler.respond_to?(:unmarshal)
     end

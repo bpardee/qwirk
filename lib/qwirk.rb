@@ -13,11 +13,9 @@ require 'qwirk/queue_adapter'
 #require 'qwirk/batch'
 require 'qwirk/manager'
 require 'qwirk/loggable'
-require 'qwirk/railsable'
 
 module Qwirk
   extend Qwirk::Loggable
-  extend Qwirk::Railsable
 
   DEFAULT_NAME = 'Qwirk'
 
@@ -29,6 +27,9 @@ module Qwirk
   end
 
   def self.[](key)
+    raise 'Qwirk not configured' unless @@config && @@config[key]
     @@hash[key] ||= Qwirk::Adapter.new(@@config[key])
   end
 end
+
+require 'qwirk/engine' if defined?(Rails)

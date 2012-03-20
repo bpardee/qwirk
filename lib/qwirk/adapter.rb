@@ -22,11 +22,11 @@ module Qwirk
     end
 
     def create_publisher(options={})
-      Publisher.new(self, options)
+      Publisher.new(self, @config.merge(options))
     end
 
     def create_manager(options={})
-      Manager.new(self, options)
+      Manager.new(self, @config.merge(options))
     end
 
     def create_adapter_publisher(queue_name, topic_name, options, response_options)
@@ -36,16 +36,5 @@ module Qwirk
     def create_adapter_worker_config(parent, queue_name, topic_name, options, response_options)
       @worker_config_klass.new(self, parent, queue_name, topic_name, options, response_options)
     end
-
-    # Ripped off from ActiveSupport
-    #def underscore(camel_cased_word)
-    #  word = camel_cased_word.to_s.dup
-    #  word.gsub!(/::/, '/')
-    #  word.gsub!(/([A-Z]+)([A-Z][a-z])/,'\1_\2')
-    #  word.gsub!(/([a-z\d])([A-Z])/,'\1_\2')
-    #  word.tr!("-", "_")
-    #  word.downcase!
-    #  word
-    #end
   end
 end

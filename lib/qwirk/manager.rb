@@ -8,7 +8,13 @@ module Qwirk
     include Rumx::Bean
     attr_reader   :env, :worker_configs, :name
 
-    bean_attr_accessor :poll_time,           :float,   'How often the manager should poll the workers for their status for use by :idle_worker_timeout and :max_read_threshold'
+    bean_attr_accessor :poll_time, :float, 'How often the manager should poll the workers for their status for use by :idle_worker_timeout and :max_read_threshold'
+
+    @@default_options = {}
+
+    def self.default_options=(options)
+      @@default_options = options
+    end
 
     # Constructs a manager.  Accepts a hash of config options
     #   name         - name which this bean will be added
@@ -21,6 +27,8 @@ module Qwirk
     #   persist_file - WorkerConfig attributes that are modified externally (via Rumx interface) will be stored in this file.  Without this
     #     option, external config changes that are made will be lost when the Manager is restarted.
     def initialize(queue_adapter, options={})
+      options           = @@default_options.merge(options)
+      puts "creating qwirk manager with #{options.inspect}"
       @stopped          = false
       @name             = options[:name] || Qwirk::DEFAULT_NAME
       @poll_time        = 3.0
@@ -121,7 +129,7 @@ module Qwirk
 
     def parse_worker_file(file)
       if file && File.exist?(file)
-        hash = YAML.load(ERB.new(File.read(file)).result(binding))
+        hash = YAML.load(ERB.new(File.read(file), nil, '-').result(binding))
         options = @env && hash[@env]
         unless options
           host = Socket.gethostname.sub(/\..*/, '')
