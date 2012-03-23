@@ -97,7 +97,7 @@ module Qwirk
       @reply_thread.join
     end
 
-    def finish
+    def finished_publishing
       @finished_publishing = true
       @pending_hash_mutex.synchronize do
         do_stop if @pending_hash.empty?

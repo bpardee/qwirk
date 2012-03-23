@@ -27,6 +27,19 @@ module Qwirk
   end
 
   def self.[](key)
+    if @@config.nil?
+      if defined?(Rails)
+        # Allow user to use JMS w/o modifying qwirk.yml which could be checked in and hose other users
+        env = ENV['QWIRK_ENV'] || Rails.env
+        @@config = YAML.load(ERB.new(File.read(Rails.root.join("config", "qwirk.yml")), nil, '-').result(binding))[env]
+        Manager.default_options = {
+            :persist_file    => Rails.root.join('log', 'qwirk_persist.yml'),
+            :worker_file     => Rails.root.join('config', 'qwirk_workers.yml'),
+            :stop_on_signal  => true,
+            :env             => env,
+        }
+      end
+    end
     raise 'Qwirk not configured' unless @@config && @@config[key]
     @@hash[key] ||= Qwirk::Adapter.new(@@config[key])
   end

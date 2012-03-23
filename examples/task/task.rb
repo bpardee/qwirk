@@ -14,7 +14,7 @@ class Task
       publish(obj)
       sleep sleep_time
     end
-    finish
+    finished_publishing
   end
 
   def on_response(request, response)
