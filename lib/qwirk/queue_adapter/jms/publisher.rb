@@ -68,6 +68,16 @@ module Qwirk
           return producer, consumer
         end
 
+        def create_fail_producer_consumer_pair(task_id, marshaler)
+          fail_queue = nil
+          @connection.session_pool.session do |session|
+            fail_queue = session.create_destination(:queue_name => :temporary)
+          end
+          producer = MyTaskProducer.new(self, fail_queue, task_id, marshaler)
+          consumer = MyTaskConsumer.new(@connection, fail_queue, task_id)
+          return producer, consumer
+        end
+
         #######
         private
         #######

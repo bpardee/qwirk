@@ -33,9 +33,18 @@ module Qwirk
 
         # See Qwirk::Publisher#create_producer_consumer_pair for the requirements for this method
         def create_producer_consumer_pair(task_id, marshaler)
-          consumer_queue = Queue.new("#{@queue}:#{task_id}")
+          consumer_queue          = Queue.new("#{@queue}:#{task_id}")
           consumer_queue.max_size = @response_options[:queue_max_size] || 100
-          producer = MyTaskProducer.new(@queue, consumer_queue, marshaler, @response_options)
+          producer                = MyTaskProducer.new(@queue, consumer_queue, marshaler, @response_options)
+          consumer                = MyTaskConsumer.new(@queue, consumer_queue)
+          return producer, consumer
+        end
+
+        def create_fail_producer_consumer_pair(task_id, marshaler)
+          consumer_queue          = Queue.new("#{@queue}Fail:#{task_id}")
+          # TODO: Unlimitied queue or some form of exception on maximum
+          consumer_queue.max_size = -1
+          producer = MyTaskProducer.new(@queue, consumer_queue, marshaler, {})
           consumer  = MyTaskConsumer.new(@queue, consumer_queue)
           return producer, consumer
         end

@@ -22,11 +22,16 @@ module Qwirk
     end
 
     def create_publisher(options={})
-      Publisher.new(self, @config.merge(options))
+      @publisher_parent ||= Rumx::Beans::Folder.new
+      publisher = Publisher.new(self, @config.merge(options))
+      @publisher_parent.bean_add_child(publisher.to_s, publisher)
+      return publisher
     end
 
     def create_manager(options={})
-      Manager.new(self, @config.merge(options))
+      manager = Manager.new(self, @config.merge(options))
+      bean_add_child(:Workers, manager)
+      return manager
     end
 
     def create_adapter_publisher(queue_name, topic_name, options, response_options)

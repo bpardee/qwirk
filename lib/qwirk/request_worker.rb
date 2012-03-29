@@ -55,7 +55,7 @@ module Qwirk
         log_backtrace(e)
       end
 
-      # Send it on to the fail queue if it was explicitly set
+      # Send it on to the fail queue if it was explicitly set (See default_fail_queue_target above)
       super
     end
   end

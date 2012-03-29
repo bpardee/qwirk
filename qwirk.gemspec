@@ -21,17 +21,17 @@ Gem::Specification.new do |s|
 
   if s.platform.to_s == 'java'
     s.add_dependency 'jruby-jms', ['>= 0.11.2']
-    # jms doensn't include this dependency yet
     s.add_dependency 'jruby-activemq'
+    # jms doensn't include this dependency yet
     s.add_dependency 'gene_pool', ['>= 1.2.0']
+    s.add_development_dependency 'activerecord-jdbcmysql-adapter'
+    s.add_development_dependency 'jdbc-mysql'
   end
-  s.add_dependency 'rumx', ['>= 0.2.0']
+  s.add_dependency 'rumx', ['>= 0.2.1']
   s.add_dependency 'rack'
   s.add_development_dependency 'rake'
   s.add_development_dependency 'rdoc'
   s.add_development_dependency 'bson'
   s.add_development_dependency 'json'
-  s.add_development_dependency 'activerecord-jdbcmysql-adapter'
-  s.add_development_dependency 'jdbc-mysql'
   s.add_development_dependency 'shoulda'
 end

@@ -18,7 +18,6 @@ module Qwirk
 
     # Constructs a manager.  Accepts a hash of config options
     #   name         - name which this bean will be added
-    #   parent_bean  - parent Rumx::Bean that this bean will be a child of.  Defaults to the Rumx::Bean.root
     #   env          - environment being executed under.  For a rails project, this will be the value of Rails.env
     #   worker_file  - the worker file is a hash with the environment or hostname as the primary key and a subhash with the worker names
     #     as the keys and the config options for the value.  In this file, the env will be searched first and if that doesn't exist,
@@ -28,11 +27,10 @@ module Qwirk
     #     option, external config changes that are made will be lost when the Manager is restarted.
     def initialize(queue_adapter, options={})
       options           = @@default_options.merge(options)
-      puts "creating qwirk manager with #{options.inspect}"
+      #puts "creating qwirk manager with #{options.inspect}"
       @stopped          = false
       @name             = options[:name] || Qwirk::DEFAULT_NAME
       @poll_time        = 3.0
-      parent_bean       = options[:parent_bean] || Rumx::Bean.root
       @worker_configs   = []
       @env              = options[:env]
       @worker_options   = parse_worker_file(options[:worker_file])
@@ -51,7 +49,6 @@ module Qwirk
         end
       end
 
-      parent_bean.bean_add_child(@name, self)
       start_timer_thread
       stop_on_signal if options[:stop_on_signal]
     end

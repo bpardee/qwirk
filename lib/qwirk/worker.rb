@@ -11,8 +11,9 @@ module Qwirk
   #    end
   #  end
   #
-  # A topic can be specified using virtual_topic as follows (ActiveMQ only).  Multiple separate workers can
-  # subscribe to the same topic (under ActiveMQ - see http://activemq.apache.org/virtual-destinations.html):
+  # A topic can also be specified.  Note that for JMS, this is only supported under ActiveMQ.  On others,
+  # each thread for a given worker will act as a separate subscriber.
+  # (For ActiveMQ - see http://activemq.apache.org/virtual-destinations.html):
   #  class FooWorker
   #    include Qwirk::QueueAdapter::JMS::Worker
   #    topic 'Zulu'

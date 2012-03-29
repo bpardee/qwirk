@@ -1,8 +1,12 @@
 # Protocol independent class to handle Publishing
 module Qwirk
   class Publisher
+    include Rumx::Bean
+
     #attr_reader :producer_options, :persistent, :reply_queue
     attr_reader :response_options, :adapter, :marshaler
+
+    bean_attr_reader :tasks, :hash, 'Hash of the latest tasks', :hash_type => :bean
 
     # Parameters:
     #   One of the following must be specified
@@ -25,6 +29,7 @@ module Qwirk
       # response_options should only be a hash or the values true or false
       @response_options = {} if @response_options && !@response_options.kind_of?(Hash)
 
+      @tasks            = {}
       @adapter          = queue_adapter.create_adapter_publisher(@queue_name, @topic_name, options, @response_options)
       marshal_sym       = options[:marshal] || :ruby
       @marshaler        = Qwirk::MarshalStrategy.find(marshal_sym)
@@ -38,12 +43,13 @@ module Qwirk
       return PublishHandle.new(self, adapter_info, start)
     end
 
-    # Creates a producer/consumer pair for writing and reading responses for a given task_id.  It will return a pair of
+    # Creates a producer/consumer pair for writing and reading responses for a given task.  It will return a pair of
     # [producer, consumer].  The producer will publish objects specifically for the task.  The consumer is an object that responds_to
     # receive which will return a [message_id, response object] and acknowledge_message which will acknowledge the
     # last message read.  It should also respond to stop which will interrupt any receive calls causing it to return nil.
-    def create_producer_consumer_pair(task_id)
-      @adapter.create_producer_consumer_pair(task_id, @marshaler)
+    def create_producer_consumer_pair(task)
+      @tasks[task.task_id] = task
+      @adapter.create_producer_consumer_pair(task.task_id, @marshaler)
     end
 
     def to_s
