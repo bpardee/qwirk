@@ -97,7 +97,7 @@ module Qwirk
         # Don't overwrite if the user set to false, only if it was never set
         target = self.class.default_fail_queue_target if target.nil?
         if target == true
-          return "#{config.name}Fail"
+          return Qwirk.fail_queue_name(config.name)
         elsif target == false
           return nil
         elsif target.kind_of?(String)

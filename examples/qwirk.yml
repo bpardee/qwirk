@@ -10,9 +10,11 @@ active_mq:
   #:username: myuser
   #:password: mypassword
 
-#active_mq_invm:
-#  :adapter: ActiveMQ
-#  :log_times: true
-#  :factory: org.apache.activemq.ActiveMQConnectionFactory
-#  :broker_url: vm://claritybase?brokerConfig=xbean:< %= Rails.root.join('config', 'activemq.xml') % >
-#  :object_message_serialization_defered: true
+active_mq_invm:
+  :adapter: ActiveMQ
+  :log_times: true
+  :factory: org.apache.activemq.ActiveMQConnectionFactory
+  :broker_url: vm://qwirk?brokerConfig=xbean:../activemq.xml
+  :object_message_serialization_defered: true
+  :username: qwirk
+  :password: qwirk

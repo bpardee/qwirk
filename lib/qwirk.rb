@@ -54,6 +54,10 @@ module Qwirk
     raise 'Qwirk not configured' unless @@config && @@config[key]
     @@hash[key] ||= Qwirk::Adapter.new(@@config[key])
   end
+
+  def self.fail_queue_name(queue_name)
+    return "#{queue_name.to_s}Fail"
+  end
 end
 
 require 'qwirk/engine' if defined?(Rails)

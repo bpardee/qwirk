@@ -1,15 +1,13 @@
 module Qwirk
 
   # The following options can be used for configuring the class
-  #     :max_pending_records => <integer>
-  #       This is how many records can be queued at a time.
   #     :
   module Task
     #include Qwirk::BaseWorker
     include Rumx::Bean
 
-    bean_attr_accessor :max_pending_records, :integer, 'The max number of records that can be published without having been responded to (publishing blocks at this point).'
     bean_attr_reader   :task_id,             :string,  'The ID for this task'
+    bean_attr_reader   :publish_count,       :integer, 'The number of requests that have been published'
     bean_attr_reader   :success_count,       :integer, 'The number of successful responses'
     bean_attr_reader   :exception_count,     :integer, 'The number of exception responses'
     bean_attr_reader   :total_count,         :integer, 'The total expected records to be published (optional)'
@@ -27,22 +25,21 @@ module Qwirk
     end
 
     def initialize(publisher, task_id, total_count, opts={})
-      @publisher              = publisher
-      @pending_hash           = Hash.new
-      @pending_hash_mutex     = Mutex.new
-      @pending_hash_condition = ConditionVariable.new
-      @task_id                = task_id
-      @stopped                = false
-      @finished_publishing    = false
-      @max_pending_records    = opts[:max_pending_records] || 100
-      @retry                  = opts[:retry]
-      @auto_retry             = opts[:auto_retry]
-      @success_count          = 0
-      @exception_count        = 0
-      @total_count            = total_count
-      @exceptions_per_run     = []
+      @publisher           = publisher
+      @mutex               = Mutex.new
+      @condition           = ConditionVariable.new
+      @task_id             = task_id
+      @stopped             = false
+      @finished_publishing = false
+      @retry               = opts[:retry]
+      @auto_retry          = opts[:auto_retry]
+      @publish_count       = 0
+      @success_count       = 0
+      @exception_count     = 0
+      @total_count         = total_count
+      @exceptions_per_run  = []
 
-      @producer, @consumer   = publisher.create_producer_consumer_pair(self)
+      @producer, @consumer = publisher.create_producer_consumer_pair(self)
       @reply_thread = Thread.new do
         java.lang.Thread.current_thread.name = "Qwirk task: #{task_id}"
         reply_event_loop
@@ -51,10 +48,10 @@ module Qwirk
     end
 
     # Stuff to override
-    def on_response(request, response)
+    def on_response(response)
     end
 
-    def on_exception(request, exception)
+    def on_exception(exception)
     end
 
     def on_update()
@@ -66,19 +63,23 @@ module Qwirk
     def retry=(val)
       @retry = val
       if val
-        @pending_hash_mutex.synchronize { check_retry }
+        @mutex.synchronize { check_retry }
+      end
+    end
+
+    def auto_retry=(val)
+      @auto_retry = val
+      if val
+        @mutex.synchronize { check_retry }
       end
     end
 
     def publish(object)
       marshaled_object = @publisher.marshaler.marshal(object)
-      @pending_hash_mutex.synchronize do
-        while !@stopped && @pending_hash.size >= @max_pending_records
-          @pending_hash_condition.wait(@pending_hash_mutex)
-        end
+      @mutex.synchronize do
         unless @stopped
-          message_id = @producer.send(marshaled_object)
-          @pending_hash[message_id] = object
+          @producer.send(marshaled_object)
+          @publish_count += 1
         end
       end
     end
@@ -88,31 +89,20 @@ module Qwirk
     end
 
     def stop
-      @pending_hash_mutex.synchronize { do_stop }
+      @mutex.synchronize { do_stop }
       @reply_thread.join
     end
 
     def finished_publishing
+      @total_count = @publish_count
       @finished_publishing = true
-      @pending_hash_mutex.synchronize { check_finish }
+      @mutex.synchronize { check_finish }
       @reply_thread.join
     end
 
     #######
     private
     #######
-
-    def verify_fail_queue_creation
-      unless @fail_producer
-        @fail_producer, @fail_consumer = publisher.create_producer_fail_consumer_pair(@task_id)
-      end
-    end
-
-    def publish_fail_request(object)
-      verify_fail_queue_creation
-      marshaled_object = @publisher.marshaler.marshal(object)
-      @fail_producer.send(marshaled_object)
-    end
 
     # Must be called within a mutex synchronize
     def do_stop
@@ -123,26 +113,19 @@ module Qwirk
     end
 
     def reply_event_loop
-      while !@stopped && pair = @consumer.receive
-        message_id, response = pair
-        @pending_hash_mutex.synchronize do
+      while !@stopped && response = @consumer.receive
+        @mutex.synchronize do
           unless @stopped
-            request = @pending_hash.delete(message_id)
-            if request
-              if response.kind_of?(RemoteException)
-                publish_fail_request(request)
-                on_exception(request, response)
-                @exception_count += 1
-              else
-                on_response(request, response)
-                @success_count += 1
-              end
+            if response.kind_of?(RemoteException)
+              @exception_count += 1
+              on_exception(response)
             else
-              Qwirk.logger.warn("#{self}: Read unexpected response with message_id=#{message_id}")
+              @success_count += 1
+              on_response(response)
             end
             @consumer.acknowledge_message
             check_finish
-            @pending_hash_condition.signal
+            @condition.signal
           end
         end
       end
@@ -155,8 +138,8 @@ module Qwirk
 
     # Must be called within a mutex synchronize
     def check_finish
-      if @finished_publishing && @pending_hash.empty?
-        if @exception_count == 0
+      if @finished_publishing
+        if @success_count >= @total_count
           do_stop
         else
           check_retry
@@ -166,7 +149,7 @@ module Qwirk
 
     # Must be called within a mutex synchronize
     def check_retry
-      if @finished_publishing && @pending_hash.empty? && @exception_count > 0 && (@retry || @auto_retry)
+      if @finished_publishing && @exception_count > 0 && (@exception_count+@success_count) == @total_count && (@retry || @auto_retry)
         # If we're just doing auto_retry but nothing succeeded last time, then don't run again
         return if !@retry && @auto_retry && @exception_count == @exceptions_per_run.last
         Qwirk.logger.info "#{self}: Retrying exception records, exception count = #{@exception_count}"
@@ -182,7 +165,7 @@ module Qwirk
               @fail_consumer.acknowledge_message
             end
             @finished_publishing = true
-            @pending_hash_mutex.synchronize { check_finish }
+            @mutex.synchronize { check_finish }
           rescue Exception => e
             do_stop
             Qwirk.logger.error "#{self}: Exception, thread terminating: #{e.message}\n\t#{e.backtrace.join("\n\t")}"

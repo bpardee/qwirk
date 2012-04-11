@@ -55,5 +55,13 @@ module Qwirk
     def to_s
       "#{self.class.name}:#{@queue_name || @topic_name}"
     end
+
+    def default_fail_queue_name
+      Qwirk.fail_queue_name(@queue_name || @topic_name)
+    end
+
+    def create_fail_queue_consumer(fail_queue_name=nil)
+      fail_queue_name ||= default_fail_queue_name
+    end
   end
 end

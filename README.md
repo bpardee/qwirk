@@ -6,7 +6,7 @@ http://github.com/ClarityServices/qwirk
 
 JRuby library for performing background tasks via JMS.
 
-Beta version.  API still subject to change.
+Alpha version.  API still subject to change.
 
 ## Features/Problems:
 
@@ -49,7 +49,7 @@ In development and test mode, you will notice that there is no configuration def
 synchronous calls to the Worker's perform method which matches the destination queue or topic.
 This will allow your coworkers to use the functionality
 of the queueing system without having to startup a JMS server.  If you wanted to start up in an actual server-type mode, you
-might set the MODERN_TIMES_ENV environment variable to "development_server" to override the Rails.env.  This will allow you to test
+might set the QWIRK_ENV environment variable to "development_server" to override the Rails.env.  This will allow you to test
 the queueing system without having to make temporary changes to the config file which could accidentally get checked in.
 For staging and production
 modes, you will need to have a JMS server running.  Note that this library has only been tested with ActiveMQ.
@@ -171,14 +171,10 @@ TODO: See examples/requestor
 TODO: See examples/advanced_requestor
 
 
-## What's with the name?
-
-I'm a Chaplin fan.
-
 ## Author
 
 Brad Pardee
 
 ## Copyright
 
-Copyright (c) 2011 Clarity Services. See LICENSE for details.
+Copyright (c) 2012 Clarity Services. See LICENSE for details.

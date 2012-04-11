@@ -17,10 +17,11 @@ module Qwirk
           @response_persistent_str   = nil
           @response_persistent_str   = (!!response_options[:persistent]).to_s unless response_options[:persistent].nil?
 
-          # TODO: Use sync attribute so this queue isn't constantly created.
-          reply_queue_name = response_options[:queue_name] || :temporary
-          if response_options
-            @connection.session_pool.session do |session|
+          @connection.session_pool.session do |session|
+            # TODO: Use sync attribute so these queues aren't constantly created.
+            @dest_queue = session.create_destination(@dest_options)
+            if response_options
+              reply_queue_name = response_options[:queue_name] || :temporary
               @reply_queue = session.create_destination(:queue_name => reply_queue_name)
             end
           end
@@ -34,7 +35,7 @@ module Qwirk
         # TODO: Too hackish to include task_id in here, think of a better solution
         def publish(marshaled_object, marshaler, task_id, props)
           message = nil
-          @connection.session_pool.producer(@dest_options) do |session, producer|
+          @connection.session_pool.producer(:destination => @dest_queue) do |session, producer|
             producer.time_to_live                  = @time_to_live if @time_to_live
             producer.delivery_mode_sym             = @persistent_sym
             message = JMS.create_message(session, marshaled_object, marshaler.marshal_type)
@@ -54,7 +55,7 @@ module Qwirk
 
         # See Qwirk::PublishHandle#read_response for the requirements for this method.
         def with_response(message_id, &block)
-          raise "Invalid call to with_response for publisher to #{@dest_options.inspect}, not setup for responding" unless @reply_queue
+          raise "Invalid call to with_response for #{self}, not setup for responding" unless @reply_queue
           options = { :destination => @reply_queue, :selector => "JMSCorrelationID = '#{message_id}'" }
           @connection.session_pool.consumer(options) do |session, consumer|
             yield MyConsumer.new(consumer)
@@ -64,7 +65,7 @@ module Qwirk
         # See Qwirk::Publisher#create_task_consumer for the requirements for this method.
         def create_producer_consumer_pair(task_id, marshaler)
           producer = MyTaskProducer.new(self, @reply_queue, task_id, marshaler)
-          consumer = MyTaskConsumer.new(@connection, @reply_queue, task_id)
+          consumer = Consumer.new(@connection, :destination => reply_queue, :selector => "QwirkTaskID = '#{task_id}'")
           return producer, consumer
         end
 
@@ -74,8 +75,12 @@ module Qwirk
             fail_queue = session.create_destination(:queue_name => :temporary)
           end
           producer = MyTaskProducer.new(self, fail_queue, task_id, marshaler)
-          consumer = MyTaskConsumer.new(@connection, fail_queue, task_id)
+          consumer = Consumer.new(@connection, :destination => reply_queue, :selector => "QwirkTaskID = '#{task_id}'")
           return producer, consumer
+        end
+
+        def to_s
+          "Publisher: #{@dest_options.inspect}"
         end
 
         #######
@@ -113,37 +118,6 @@ module Qwirk
 
           def send(marshaled_object)
             @publisher.publish(marshaled_object, @marshaler, @task_id, {})
-          end
-        end
-
-        class MyTaskConsumer
-          attr_reader :stopped
-
-          def initialize(connection, reply_queue, task_id)
-            @options = { :destination => reply_queue, :selector => "QwirkTaskID = '#{task_id}'" }
-            @session = connection.create_session
-            @consumer = @session.consumer(@options)
-            @session.start
-            @stopped = false
-          end
-
-          def receive
-            @message = @consumer.receive
-            return nil unless @message
-            return [@message.jms_correlation_id, JMS.parse_response(@message)]
-          end
-
-          def acknowledge_message
-            @message.acknowledge
-          end
-
-          def stop
-            return if @stopped
-            Qwirk.logger.info "Stopping Task consumer for #{@options.inspect}"
-            # Don't clobber the session before a reply
-            @consumer.close if @consumer
-            @session.close if @session
-            @stopped = true
           end
         end
       end

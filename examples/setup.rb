@@ -8,6 +8,6 @@ require 'yaml'
 require 'logger'
 
 #Qwirk.logger = Logger.new($stdout)
-
-Qwirk.config = YAML.load(File.read(File.expand_path('../qwirk.yml', __FILE__)))
+file = File.expand_path('../qwirk.yml', __FILE__)
+Qwirk.config = YAML.load(ERB.new(File.read(file), nil, '-').result(binding))
 $adapter_key = ENV['QWIRK_ADAPTER'] || 'in_mem'

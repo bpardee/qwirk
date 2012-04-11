@@ -13,7 +13,6 @@ Gem::Specification.new do |s|
   s.homepage    = 'http://github.com/ClarityServices/qwirk'
   s.files       = Dir["{app,examples,lib,config}/**/*"] + %w(LICENSE.txt Rakefile History.md README.md)
   s.test_files  = Dir["test/**/*"]
-  s.version     = '0.0.1.alpha1'
 
   # Rakefile needs to create spec for both platforms (ruby and java), using the
   # $platform global variable. In all other cases, we figure it out from RUBY_PLATFORM.
@@ -27,7 +26,7 @@ Gem::Specification.new do |s|
     s.add_development_dependency 'activerecord-jdbcmysql-adapter'
     s.add_development_dependency 'jdbc-mysql'
   end
-  s.add_dependency 'rumx', ['>= 0.2.1']
+  s.add_dependency 'rumx', ['>= 0.2.2']
   s.add_dependency 'rack'
   s.add_development_dependency 'rake'
   s.add_development_dependency 'rdoc'

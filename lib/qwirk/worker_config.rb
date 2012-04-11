@@ -22,7 +22,7 @@ module Qwirk
     end
 
     # Create new WorkerConfig to manage workers of a common class
-    def initialize(queue_adapter, name, manager, worker_class, options)
+    def initialize(queue_adapter, name, manager, worker_class, default_options, options)
       @name             = name
       @manager          = manager
       @worker_class     = worker_class
@@ -42,6 +42,14 @@ module Qwirk
       @log_times        = queue_adapter.log_times
 
       #Qwirk.logger.debug { "options=#{options.inspect}" }
+      default_options.each do |key, value|
+        begin
+          send(key.to_s+'=', value)
+        rescue Exception => e
+          Qwirk.logger.warn "WARNING: During initialization of #{worker_class.name} config=#{@name}, default assignment of #{key}=#{value} was invalid"
+        end
+      end
+      # Run the specified options after the default options, so that codependant options don't get overwritten (like min_count/max_count)
       options.each do |key, value|
         begin
           send(key.to_s+'=', value)
