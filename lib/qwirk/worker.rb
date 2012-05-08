@@ -117,9 +117,9 @@ module Qwirk
       @status               = 'Started'
       @stopped              = false
       @processing_mutex     = Mutex.new
-      self.index  = index
-      self.config = worker_config
-      @adapter = worker_config.adapter.create_worker
+      self.index            = index
+      self.config           = worker_config
+      @adapter              = worker_config.adapter.create_worker
       self.thread = Thread.new do
         java.lang.Thread.current_thread.name = "Qwirk worker: #{self}" if RUBY_PLATFORM == 'jruby'
         #Qwirk.logger.debug "#{worker}: Started thread with priority #{Thread.current.priority}"

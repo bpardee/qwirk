@@ -46,7 +46,12 @@ module Qwirk
         begin
           send(key.to_s+'=', value)
         rescue Exception => e
-          Qwirk.logger.warn "WARNING: During initialization of #{worker_class.name} config=#{@name}, default assignment of #{key}=#{value} was invalid"
+          # Let config_reader's set a default value
+          begin
+            instance_variable_set("@#{key}", value)
+          rescue Exception => e
+            Qwirk.logger.warn "WARNING: During initialization of #{worker_class.name} config=#{@name}, default assignment of #{key}=#{value} was invalid"
+          end
         end
       end
       # Run the specified options after the default options, so that codependant options don't get overwritten (like min_count/max_count)
@@ -167,6 +172,8 @@ module Qwirk
       Qwirk.logger.debug {"#{self}: Adding worker #{worker}"}
       @index_mutex.synchronize { @index_count += 1 }
       @workers << worker
+    rescue Exception => e
+      Qwirk.logger.error("Unable to add #{@worker_class} worker: #{e.message}\n\t#{e.backtrace.join("\n\t")}")
     end
 
     def remove_worker(worker)

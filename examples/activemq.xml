@@ -1,0 +1,84 @@
+<!--
+    ActiveMQ Configuration where the Broker is in-vm
+
+    Settings objectives:
+    - Use available resources
+    - No indefinite limiting of producers to prevent "hanging" of producers
+      when consumers are slow
+    - Use store based message flow so that slow consumers do not slow down producers
+-->
+<beans
+  xmlns="http://www.springframework.org/schema/beans"
+  xmlns:amq="http://activemq.apache.org/schema/core"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+  http://activemq.apache.org/schema/core http://activemq.apache.org/schema/core/activemq-core.xsd">
+
+    <broker xmlns="http://activemq.apache.org/schema/core" brokerName="qwirk" dataDirectory="tmp" destroyApplicationContextOnStop="true">
+
+        <!-- Set producerFlowControl limits -->
+        <destinationPolicy>
+            <policyMap>
+                <policyEntries>
+                    <policyEntry topic=">" producerFlowControl="true" memoryLimit="1024mb" />
+                    <policyEntry queue=">" producerFlowControl="true" memoryLimit="1024mb" />
+                </policyEntries>
+            </policyMap>
+        </destinationPolicy>
+
+        <!-- Use the JMX context already created by the JVM -->
+        <managementContext>
+            <managementContext createConnector="false"/>
+        </managementContext>
+
+        <!--
+            Configure message persistence for the broker. The default persistence
+            mechanism is the KahaDB store (identified by the kahaDB tag).
+            For more information, see:
+
+            http://activemq.apache.org/persistence.html
+        -->
+        <persistenceAdapter>
+            <kahaDB directory="tmp/kahadb"/>
+        </persistenceAdapter>
+
+        <plugins>
+            <!-- Configure authentication of remote connections -->
+            <simpleAuthenticationPlugin>
+                <users>
+                    <authenticationUser username="qwirkadmin" password="qwirkadmin" groups="users,admins"/>
+                    <authenticationUser username="qwirk" password="qwirk" groups="users"/>
+                </users>
+            </simpleAuthenticationPlugin>
+        </plugins>
+
+        <!-- Limits for the broker before it slows down or fails producers.
+             Cause producers to fail with javax.jms.ResourceAllocationException
+             if no space is available after 3 seconds -->
+        <systemUsage>
+            <systemUsage sendFailIfNoSpaceAfterTimeout="3000">
+                <!-- Memory limit for NON_PERSISTENT messages
+                     Apparently no longer used since ActiveMQ 5 now uses store
+                     based cursors for NON_PERSISTENT messages -->
+                <memoryUsage>
+                    <memoryUsage limit="2 gb"/>
+                </memoryUsage>
+                <!-- Disk storage limit for PERSISTENT messages -->
+                <storeUsage>
+                    <storeUsage limit="50 gb"/>
+                </storeUsage>
+                <!-- Disk storage limit for temporary (NON_PERSISTENT) messages -->
+                <tempUsage>
+                    <tempUsage limit="50 gb"/>
+                </tempUsage>
+            </systemUsage>
+        </systemUsage>
+
+        <!-- Allow remote connections using openwire protocols -->
+        <transportConnectors>
+            <transportConnector name="openwire" uri="tcp://0.0.0.0:61616"/>
+        </transportConnectors>
+
+    </broker>
+
+</beans>
