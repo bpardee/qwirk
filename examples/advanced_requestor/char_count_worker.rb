@@ -1,5 +1,5 @@
 class CharCountWorker
-  include Qwirk::RequestWorker
+  include Qwirk::ReplyWorker
 
   topic 'test_string', :response => {:marshal => :bson, :time_to_live => 5000}
   config_accessor :sleep_time, :float, 'Number of seconds to sleep between messages', 0

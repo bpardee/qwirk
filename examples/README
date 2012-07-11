@@ -1,1 +1,1 @@
-Modify the qwirk.yml file to setup the proper credentials for you ActiveMQ server.
+You can use the default InMem adapter or modify the qwirk.yml file to setup the proper credentials for your ActiveMQ server.

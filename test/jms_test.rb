@@ -97,37 +97,37 @@ module StringTest
 end
 
 class DefaultWorker
-  include Qwirk::QueueAdapter::JMS::Worker
+  include Qwirk::Adapter::JMS::Worker
   include WorkerHelper
 end
 
 module Dummy
   class DefaultWorker
-    include Qwirk::QueueAdapter::JMS::Worker
+    include Qwirk::Adapter::JMS::Worker
     include WorkerHelper
   end
 end
 
 class SpecifiedQueueWorker
-  include Qwirk::QueueAdapter::JMS::Worker
+  include Qwirk::Adapter::JMS::Worker
   queue 'MyQueueName'
   include WorkerHelper
 end
 
 class SpecifiedQueue2Worker
-  include Qwirk::QueueAdapter::JMS::Worker
+  include Qwirk::Adapter::JMS::Worker
   queue 'MyQueueName'
   include WorkerHelper
 end
 
 class SpecifiedTopicWorker
-  include Qwirk::QueueAdapter::JMS::Worker
+  include Qwirk::Adapter::JMS::Worker
   virtual_topic 'MyTopicName'
   include WorkerHelper
 end
 
 class SpecifiedTopic2Worker
-  include Qwirk::QueueAdapter::JMS::Worker
+  include Qwirk::Adapter::JMS::Worker
   virtual_topic 'MyTopicName'
   include WorkerHelper
 end
@@ -138,7 +138,7 @@ class JMSTest < Test::Unit::TestCase
   @@client = JMX.connect
 
   def publish(marshal, tester, range, options)
-    publisher = Qwirk::QueueAdapter::JMS::Publisher.new(options.merge(:marshal => marshal))
+    publisher = Qwirk::Adapter::JMS::Publisher.new(options.merge(:marshal => marshal))
     puts "Publishing #{range} to #{publisher} via #{marshal}"
     range.each do |i|
       obj = tester.create_obj(i)
@@ -182,7 +182,7 @@ class JMSTest < Test::Unit::TestCase
   context 'jms' do
     setup do
       config = YAML.load(ERB.new(File.read(File.join(File.dirname(__FILE__), 'jms.yml'))).result(binding))
-      Qwirk::QueueAdapter::JMS::Connection.init(config)
+      Qwirk::Adapter::JMS::Connection.init(config)
     end
 
     teardown do
@@ -257,11 +257,11 @@ class JMSTest < Test::Unit::TestCase
           SpecifiedTopicWorker.new(:tester => RubyTest, :name => 'SpecifiedTopicClone'),
           SpecifiedTopic2Worker.new(:tester => RubyTest),
         ]
-        Qwirk::QueueAdapter::JMS::Publisher.setup_dummy_publishing(workers)
+        Qwirk::Adapter::JMS::Publisher.setup_dummy_publishing(workers)
       end
 
       teardown do
-        Qwirk::QueueAdapter::JMS::Publisher.clear_dummy_publishing
+        Qwirk::Adapter::JMS::Publisher.clear_dummy_publishing
       end
 
       should "directly call applicable workers" do

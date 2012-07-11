@@ -25,9 +25,9 @@ module Qwirk
     #     production, a set of workers could be defined under production or specific workers for each host name.
     #   persist_file - WorkerConfig attributes that are modified externally (via Rumx interface) will be stored in this file.  Without this
     #     option, external config changes that are made will be lost when the Manager is restarted.
-    def initialize(queue_adapter, options={})
+    def initialize(adapter_factory, options={})
+      @adapter_factory    = adapter_factory
       options           = @@default_options.merge(options)
-      #puts "creating qwirk manager with #{options.inspect}"
       @stopped          = false
       @name             = options[:name] || Qwirk::DEFAULT_NAME
       @poll_time        = 3.0
@@ -38,13 +38,13 @@ module Qwirk
       @persist_options  = (@persist_file && File.exist?(@persist_file)) ? YAML.load_file(@persist_file) : {}
 
       BaseWorker.worker_classes.each do |worker_class|
-        worker_config_class = worker_class.config_class
-        worker_class.each_config do |config_name, default_options|
-          # Least priority is config options defined in the Worker class, then the workers.yml file, highest priority is persist_file (ad-hoc changes made manually)
+        worker_class.each_config(adapter_factory.worker_config_class) do |config_name, extended_worker_config_class, default_options|
+          # Least priority is config default_options defined in the Worker class, then the workers.yml file,
+          # highest priority is persist_file (ad-hoc changes made manually)
           options = {}
           options = options.merge(@worker_options[config_name]) if @worker_options[config_name]
           options = options.merge(@persist_options[config_name]) if @persist_options[config_name]
-          worker_config = worker_config_class.new(queue_adapter, config_name, self, worker_class, default_options, options)
+          worker_config = extended_worker_config_class.new(adapter_factory, config_name, self, worker_class, default_options, options)
           bean_add_child(config_name, worker_config)
           @worker_configs << worker_config
         end
@@ -54,6 +54,8 @@ module Qwirk
       stop_on_signal if options[:stop_on_signal]
     end
 
+    # Create a timer_thread to make periodic calls to the worker_configs in order to do such things as expand/contract
+    # workers, etc.
     def start_timer_thread
       # TODO: Optionize hard-coded values
       @timer_thread = Thread.new do
@@ -86,12 +88,13 @@ module Qwirk
       end
     end
 
+    # Store off any options that are no longer set to default
     def save_persist_state
       return unless @persist_file
       new_persist_options = {}
       BaseWorker.worker_classes.each do |worker_class|
-        worker_class.each_config do |config_name, options|
-          static_options = options.merge(@worker_options[config_name] || {})
+        worker_class.each_config(@adapter_factory.worker_config_class) do |config_name, ignored_extended_worker_config_class, default_options|
+          static_options = default_options.merge(@worker_options[config_name] || {})
           worker_config = self[config_name]
           hash = {}
           # Only store off the config values that are specifically different from default values or values set in the workers.yml file

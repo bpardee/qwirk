@@ -1,5 +1,5 @@
 class ExceptionRaiserWorker
-  include Qwirk::RequestWorker
+  include Qwirk::ReplyWorker
 
   topic 'test_string', :response => {:marshal => :string, :time_to_live => 5000}
 

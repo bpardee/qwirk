@@ -20,9 +20,9 @@ class Publisher
   ]
 
 
-  def initialize(adapter_key)
-    @s1_publisher = Qwirk[adapter_key].create_publisher(:queue_name => 'S1', :marshal => :bson)
-    @s2_publisher = Qwirk[adapter_key].create_publisher(:queue_name => 'S2', :marshal => :string)
+  def initialize(adapter_factory_key)
+    @s1_publisher = Qwirk[adapter_factory_key].create_publisher(:queue_name => 'S1', :marshal => :bson)
+    @s2_publisher = Qwirk[adapter_factory_key].create_publisher(:queue_name => 'S2', :marshal => :string)
     @s1_count = 0
     @s2_count = 0
   end

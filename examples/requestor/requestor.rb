@@ -25,10 +25,10 @@ class Requestor
   ]
 
 
-  def initialize(adapter_key)
+  def initialize(adapter_factory_key)
     @outstanding_hash_mutex = Mutex.new
     @messages = []
-    @publisher = Qwirk[adapter_key].create_publisher(:queue_name => 'ReverseEcho', :response => {:time_to_live => 10000}, :marshal => :string)
+    @publisher = Qwirk[adapter_factory_key].create_publisher(:queue_name => 'ReverseEcho', :response => {:time_to_live => 10000}, :marshal => :string)
   end
 
   def publish(message, timeout, sleep_time, thread_count)

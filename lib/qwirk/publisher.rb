@@ -4,7 +4,7 @@ module Qwirk
     include Rumx::Bean
 
     #attr_reader :producer_options, :persistent, :reply_queue
-    attr_reader :response_options, :adapter, :marshaler
+    attr_reader :response_options, :impl, :marshaler
 
     bean_attr_reader :tasks, :hash, 'Hash of the latest tasks', :hash_type => :bean
 
@@ -19,7 +19,7 @@ module Qwirk
     #     :response              => if true or a hash of response options, a temporary reply queue will be setup for handling responses
     #       :time_to_live        => expiration time in ms for the response message(s) (JMS))
     #       :persistent          => true or false for the response message(s), set to false if you don't want timed out messages ending up in the DLQ (defaults to true unless time_to_live is set)
-    def initialize(queue_adapter, options)
+    def initialize(adapter_factory, options)
       options = options.dup
       @queue_name = options.delete(:queue_name)
       @topic_name = options.delete(:topic_name)
@@ -29,17 +29,17 @@ module Qwirk
       # response_options should only be a hash or the values true or false
       @response_options = {} if @response_options && !@response_options.kind_of?(Hash)
 
-      @tasks            = {}
-      @adapter          = queue_adapter.create_adapter_publisher(@queue_name, @topic_name, options, @response_options)
-      marshal_sym       = options[:marshal] || :ruby
-      @marshaler        = Qwirk::MarshalStrategy.find(marshal_sym)
+      @tasks      = {}
+      @impl       = adapter_factory.create_publisher_impl(@queue_name, @topic_name, options, @response_options)
+      marshal_sym = options[:marshal] || :ruby
+      @marshaler  = Qwirk::MarshalStrategy.find(marshal_sym)
     end
 
     # Publish the given object to the address.
     def publish(object, props={})
       start = Time.now
       marshaled_object = @marshaler.marshal(object)
-      adapter_info = @adapter.publish(marshaled_object, @marshaler, nil, props)
+      adapter_info = @impl.publish(marshaled_object, @marshaler, nil, props)
       return PublishHandle.new(self, adapter_info, start)
     end
 
@@ -49,7 +49,7 @@ module Qwirk
     # last message read.  It should also respond to stop which will interrupt any receive calls causing it to return nil.
     def create_producer_consumer_pair(task)
       @tasks[task.task_id] = task
-      @adapter.create_producer_consumer_pair(task.task_id, @marshaler)
+      @impl.create_producer_consumer_pair(task.task_id, @marshaler)
     end
 
     def to_s
@@ -61,7 +61,7 @@ module Qwirk
     end
 
     def create_fail_queue_consumer(fail_queue_name=nil)
-      fail_queue_name ||= default_fail_queue_name
+      fail_queue_name || default_fail_queue_name
     end
   end
 end

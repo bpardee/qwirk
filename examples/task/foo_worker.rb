@@ -1,5 +1,5 @@
 class FooWorker
-  include Qwirk::RequestWorker
+  include Qwirk::ReplyWorker
 
   config_accessor :sleep_time, :float, 'Number of seconds to sleep between messages', 5
 

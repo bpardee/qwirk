@@ -7,7 +7,7 @@ require 'erb'
 # NOTE: This test requires a running ActiveMQ server
 
 class ExceptionWorker
-  include Qwirk::QueueAdapter::JMS::Worker
+  include Qwirk::Adapter::JMS::Worker
   def perform(obj)
     puts "#{name} received #{obj} but raising exception"
     raise 'foobar'
@@ -17,8 +17,8 @@ class ExceptionWorker
   end
 end
 
-class ExceptionRequestWorker
-  include Qwirk::QueueAdapter::JMS::RequestWorker
+class ExceptionReplyWorker
+  include Qwirk::Adapter::JMS::ReplyWorker
 
   def request(obj)
     puts "#{name} received #{obj} but raising exception"
@@ -31,7 +31,7 @@ end
 
 # This will read from the queue that ExceptionWorker fails to
 class ExceptionFailWorker
-  include Qwirk::QueueAdapter::JMS::Worker
+  include Qwirk::Adapter::JMS::Worker
 
   @@my_hash = {}
 
@@ -49,7 +49,7 @@ class JMSFailTest < Test::Unit::TestCase
 
   def assert_fail_queue(queue_name, fail_queue_name, value, is_fail_queue_expected)
     # Publish to Exception that will throw exception which will put on ExceptionFail queue
-    publisher = Qwirk::QueueAdapter::JMS::Publisher.new(:queue_name => queue_name, :marshal => :string)
+    publisher = Qwirk::Adapter::JMS::Publisher.new(:queue_name => queue_name, :marshal => :string)
     puts "Publishing #{value} to #{queue_name}"
     publisher.publish(value)
     sleep 1
@@ -60,7 +60,7 @@ class JMSFailTest < Test::Unit::TestCase
   context 'jms' do
     setup do
       config = YAML.load(ERB.new(File.read(File.join(File.dirname(__FILE__), 'jms.yml'))).result(binding))
-      Qwirk::QueueAdapter::JMS::Connection.init(config)
+      Qwirk::Adapter::JMS::Connection.init(config)
     end
 
     teardown do
@@ -97,28 +97,28 @@ class JMSFailTest < Test::Unit::TestCase
 
         # Should NOT receive message on the fail worker
         name = 'ExceptionRequest'
-        @manager.add(ExceptionRequestWorker, 1)
+        @manager.add(ExceptionReplyWorker, 1)
         @manager.add(ExceptionFailWorker, 1, :name => "#{name}Fail")
 
         # Should NOT receive message on the fail worker when using specified names
         name = 'ExceptionRequestNameSpecified'
-        @manager.add(ExceptionRequestWorker, 1, :name => name)
+        @manager.add(ExceptionReplyWorker, 1, :name => name)
         @manager.add(ExceptionFailWorker, 1, :name => "#{name}Fail")
 
         # Should receive message on the fail worker when using specified names and fail_queue set true
         name = 'ExceptionRequestFailQueueTrue'
-        @manager.add(ExceptionRequestWorker, 1, :name => name, :fail_queue => true)
+        @manager.add(ExceptionReplyWorker, 1, :name => name, :fail_queue => true)
         @manager.add(ExceptionFailWorker, 1, :name => "#{name}Fail")
 
         # Should NOT receive message on the fail worker when using specified names and fail_queue set false
         name = 'ExceptionRequestFailQueueFalse'
-        @manager.add(ExceptionRequestWorker, 1, :name => name, :fail_queue => false)
+        @manager.add(ExceptionReplyWorker, 1, :name => name, :fail_queue => false)
         @manager.add(ExceptionFailWorker, 1, :name => "#{name}Fail")
 
         # Should NOT receive message on the fail worker when using specified names and fail_queue set false
         name = 'ExceptionRequestFailQueueSpecified'
         fail_queue = 'MyRequestFailQueue'
-        @manager.add(ExceptionRequestWorker, 1, :name => name, :fail_queue => fail_queue)
+        @manager.add(ExceptionReplyWorker, 1, :name => name, :fail_queue => fail_queue)
         @manager.add(ExceptionFailWorker, 1, :name => fail_queue)
 
         sleep 1

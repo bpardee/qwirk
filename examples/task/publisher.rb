@@ -14,12 +14,12 @@ class Publisher
       [ :output_file, :string,  'Output file to write returned messages to', 'messages.out' ]
   ]
 
-  def initialize(adapter_key)
-    @adapter_key = adapter_key
+  def initialize(adapter_factory_key)
+    @adapter_factory_key = adapter_factory_key
     @tasks       = []
   end
 
   def perform_task(task_id, count, message, sleep_time, output_file)
-    @tasks << Task.new(@adapter_key, task_id, count, message, sleep_time, output_file)
+    @tasks << Task.new(@adapter_factory_key, task_id, count, message, sleep_time, output_file)
   end
 end

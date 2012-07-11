@@ -1,5 +1,5 @@
 class ReverseWorker
-  include Qwirk::RequestWorker
+  include Qwirk::ReplyWorker
 
   topic 'test_string', :response => {:marshal => :string, :time_to_live => 5000}
   config_accessor :sleep_time, :float, 'Number of seconds to sleep between messages', 0

@@ -2,6 +2,10 @@ in_mem:
   :adapter: InMem
   :log_times: true
 
+inline:
+  :adapter: Inline
+  :log_times: true
+
 active_mq:
   :adapter: ActiveMQ
   :log_times: true

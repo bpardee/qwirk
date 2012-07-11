@@ -1,18 +1,17 @@
 require 'rubygems'
-require 'qwirk/remote_exception'
-require 'qwirk/marshal_strategy'
-require 'qwirk/base_worker'
-require 'qwirk/worker_config'
-require 'qwirk/worker'
-require 'qwirk/request_worker'
-require 'qwirk/task'
-require 'qwirk/publisher'
-require 'qwirk/publish_handle'
 require 'qwirk/adapter'
-require 'qwirk/queue_adapter'
+require 'qwirk/adapter_factory'
+require 'qwirk/base_worker'
 #require 'qwirk/batch'
-require 'qwirk/manager'
 require 'qwirk/loggable'
+require 'qwirk/manager'
+require 'qwirk/marshal_strategy'
+require 'qwirk/publish_handle'
+require 'qwirk/publisher'
+require 'qwirk/remote_exception'
+require 'qwirk/task'
+require 'qwirk/worker'
+require 'qwirk/reply_worker'
 
 module Qwirk
   extend Qwirk::Loggable
@@ -25,7 +24,8 @@ module Qwirk
   class MyBean
     include Rumx::Bean
 
-    bean_attr_reader :adapters,  :hash,   'Adapters', :hash_type => :bean
+    # These are actually AdapterFactory's but presenting as adapters to the user.
+    bean_attr_reader :adapters,  :hash, 'Adapters', :hash_type => :bean
 
     def initialize(hash)
       @adapters = hash
@@ -37,7 +37,7 @@ module Qwirk
     Rumx::Bean.root.bean_add_child(DEFAULT_NAME, MyBean.new(@@hash))
   end
 
-  def self.[](key)
+  def self.[](adapter_key)
     if @@config.nil?
       if defined?(Rails)
         # Allow user to use JMS w/o modifying qwirk.yml which could be checked in and hose other users
@@ -51,8 +51,8 @@ module Qwirk
         }
       end
     end
-    raise 'Qwirk not configured' unless @@config && @@config[key]
-    @@hash[key] ||= Qwirk::Adapter.new(@@config[key])
+    raise 'Qwirk not configured' unless @@config && @@config[adapter_key]
+    @@hash[adapter_key] ||= Qwirk::AdapterFactory.new(adapter_key, @@config[adapter_key])
   end
 
   def self.fail_queue_name(queue_name)

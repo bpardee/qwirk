@@ -4,7 +4,7 @@ module Qwirk
   # By default, it will consume messages from a queue with the class name minus the Worker postfix.
   # For example, the queue call is unnecessary as it will default to a value of 'Foo' anyways:
   #  class FooWorker
-  #    include Qwirk::QueueAdapter::JMS::Worker
+  #    include Qwirk::Worker
   #    queue 'Foo'
   #    def perform(obj)
   #      # Perform work on obj
@@ -15,7 +15,7 @@ module Qwirk
   # each thread for a given worker will act as a separate subscriber.
   # (For ActiveMQ - see http://activemq.apache.org/virtual-destinations.html):
   #  class FooWorker
-  #    include Qwirk::QueueAdapter::JMS::Worker
+  #    include Qwirk::Worker
   #    topic 'Zulu'
   #    def perform(obj)
   #      # Perform work on obj
@@ -25,7 +25,7 @@ module Qwirk
   # TODO (maybe):
   # Filters can also be specified within the class:
   #  class FooWorker
-  #    include Qwirk::QueueAdapter::JMS::Worker
+  #    include Qwirk::Worker
   #    filter 'age > 30'
   #    def perform(obj)
   #      # Perform work on obj
@@ -37,7 +37,7 @@ module Qwirk
     include Qwirk::BaseWorker
 
     attr_accessor :message
-    attr_reader   :status, :adapter, :start_worker_time, :start_read_time, :start_processing_time
+    attr_reader   :status, :impl, :start_worker_time, :start_read_time, :start_processing_time
 
     module ClassMethods
       def queue(name, opts={})
@@ -71,7 +71,7 @@ module Qwirk
       end
 
       # Defines the default value of the fail_queue_target.  For extenders of this class, the default will be true
-      # but extenders can change this (RequestWorker returns exceptions to the caller so it defaults to false).
+      # but extenders can change this (ReplyWorker returns exceptions to the caller so it defaults to false).
       def default_fail_queue_target
         true
       end
@@ -113,13 +113,16 @@ module Qwirk
       base.extend(ClassMethods)
     end
 
-    def start(index, worker_config)
-      @status               = 'Started'
-      @stopped              = false
-      @processing_mutex     = Mutex.new
-      self.index            = index
-      self.config           = worker_config
-      @adapter              = worker_config.adapter.create_worker
+    def init(index, worker_config)
+      @status           = 'Started'
+      @stopped          = false
+      @processing_mutex = Mutex.new
+      self.index        = index
+      self.config       = worker_config
+      @impl             = worker_config.create_worker
+    end
+
+    def start
       self.thread = Thread.new do
         java.lang.Thread.current_thread.name = "Qwirk worker: #{self}" if RUBY_PLATFORM == 'jruby'
         #Qwirk.logger.debug "#{worker}: Started thread with priority #{Thread.current.priority}"
@@ -138,8 +141,8 @@ module Qwirk
       @status  = 'Stopping'
       @stopped = true
       @processing_mutex.synchronize do
-        # This should interrupt @adapter.receive_message above and cause it to return nil
-        @adapter.stop
+        # This should interrupt @impl.receive_message above and cause it to return nil
+        @impl.stop
       end
       puts "#{self}: base worker stop complete"
     end
@@ -157,25 +160,21 @@ module Qwirk
       Qwirk.logger.error "\t#{e.backtrace.join("\n\t")}"
     end
 
-    #########
-    protected
-    #########
-
     # Start the event loop for handling messages off the queue
     def event_loop
       Qwirk.logger.debug "#{self}: Starting receive loop"
       @start_worker_time = Time.now
-      while !@stopped && !config.adapter.stopped
+      while !@stopped && !config.stopped
         puts "#{self}: Waiting for read"
         @start_read_time = Time.now
-        msg = @adapter.receive_message
+        msg = @impl.receive_message
         if msg
           @start_processing_time = Time.now
           Qwirk.logger.debug {"#{self}: Done waiting for read in #{@start_processing_time - @start_read_time} seconds"}
           delta = config.timer.measure do
             @processing_mutex.synchronize do
               on_message(msg)
-              @adapter.acknowledge_message(msg)
+              @impl.acknowledge_message(msg)
             end
           end
           Qwirk.logger.info {"#{self}::on_message (#{'%.1f' % delta}ms)"} if self.config.log_times
@@ -189,7 +188,7 @@ module Qwirk
     ensure
       @status = 'Stopped'
       # TODO: necessary?
-      @adapter.stop
+      @impl.stop
       Qwirk.logger.flush if Qwirk.logger.respond_to?(:flush)
       config.worker_stopped(self)
     end
@@ -197,7 +196,7 @@ module Qwirk
     def on_message(message)
       # TBD - Is it necessary to provide underlying message to worker?  Should we generically provide access to message attributes?  Do filters somehow fit in here?
       @message = message
-      object = @adapter.message_to_object(message)
+      object = @impl.message_to_object(message)
       Qwirk.logger.debug {"#{self}: Received Object: #{object}"}
       perform(object)
     rescue Exception => e
@@ -209,7 +208,7 @@ module Qwirk
     def on_exception(e)
       Qwirk.logger.error "#{self}: Messaging Exception: #{e.message}"
       log_backtrace(e)
-      @adapter.handle_failure(message, @fail_queue_name) if @fail_queue_name
+      @impl.handle_failure(message, e, @fail_queue_name) if @fail_queue_name
     rescue Exception => e
       Qwirk.logger.error "#{self}: Exception in exception reply: #{e.message}"
       log_backtrace(e)
