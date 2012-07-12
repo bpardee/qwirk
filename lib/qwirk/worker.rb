@@ -136,14 +136,14 @@ module Qwirk
     # From an InMem perspective, we don't want the workers stopping until all messages in the queue have been processed.
     # Therefore we want to stop the
     def stop
-      puts "#{self}: In base worker stop"
+      Qwirk.logger.debug "#{self}: In base worker stop"
       @status  = 'Stopping'
       @stopped = true
       @processing_mutex.synchronize do
         # This should interrupt @impl.receive_message above and cause it to return nil
         @impl.stop
       end
-      puts "#{self}: base worker stop complete"
+      Qwirk.logger.debug "#{self}: base worker stop complete"
     end
 
     def perform(object)
@@ -164,7 +164,7 @@ module Qwirk
       Qwirk.logger.debug "#{self}: Starting receive loop"
       @start_worker_time = Time.now
       while !@stopped && !config.stopped
-        puts "#{self}: Waiting for read"
+        Qwirk.logger.debug "#{self}: Waiting for read"
         @start_read_time = Time.now
         msg = @impl.receive_message
         if msg
