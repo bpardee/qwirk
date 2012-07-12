@@ -44,7 +44,7 @@ module Qwirk
         private
 
         def do_send_response(original_message, object)
-          puts "Returning #{object} to queue #{@response_handle}"
+          Qwirk.logger.debug { "Returning #{object} to queue #{@response_handle}" }
           return false unless @response_handle
           @response_handle.add(original_message.object_id, object, @name)
           return true

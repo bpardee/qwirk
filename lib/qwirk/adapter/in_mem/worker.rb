@@ -50,7 +50,7 @@ module Qwirk
         private
 
         def do_send_response(original_message, object)
-          puts "Returning #{object} to queue #{@reply_queue}"
+          Qwirk.logger.debug { "Returning #{object} to queue #{@reply_queue}" |
           return unless @reply_queue
           @reply_queue.write([original_message.object_id, object, @name])
           return true
