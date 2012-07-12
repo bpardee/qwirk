@@ -5,8 +5,8 @@ module Qwirk
       class Worker
         def initialize(worker_config)
           @worker_config = worker_config
-          @name          = worker_config.parent.name
-          @marshaler     = worker_config.parent.marshaler
+          @name          = worker_config.name
+          @marshaler     = worker_config.marshaler
           @session       = worker_config.connection.create_session
           @consumer      = @session.consumer(worker_config.destination)
           @session.start
@@ -69,7 +69,7 @@ module Qwirk
               # The reply is persistent if we explicitly set it or if we don't expire
               producer.delivery_mode_sym = persistent ? :persistent : :non_persistent
               producer.time_to_live = time_to_live.to_i if time_to_live
-              reply_message = Qwirk::Adapter::JMS.create_message(@session, marshaled_object, marshaler.marshal_type)
+              reply_message = Util.create_message(@session, marshaled_object, marshaler.marshal_type)
               reply_message.jms_correlation_id = original_message.jms_message_id
               reply_message['qwirk:marshal'] = marshaler.to_sym.to_s
               reply_message['qwirk:worker']  = @name

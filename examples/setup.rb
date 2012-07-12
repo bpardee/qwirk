@@ -10,4 +10,4 @@ require 'logger'
 #Qwirk.logger = Logger.new($stdout)
 file = File.expand_path('../qwirk.yml', __FILE__)
 Qwirk.config = YAML.load(ERB.new(File.read(file), nil, '-').result(binding))
-$adapter_factory_key = ENV['QWIRK_ADAPTER'] || 'in_mem'
+$adapter_key = ENV['QWIRK_ADAPTER'] || 'in_mem'

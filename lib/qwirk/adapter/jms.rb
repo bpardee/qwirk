@@ -2,6 +2,7 @@ require 'yaml'
 
 require 'qwirk/adapter/jms/connection'
 require 'qwirk/adapter/jms/publisher'
+require 'qwirk/adapter/jms/util'
 require 'qwirk/adapter/jms/worker_config'
 require 'qwirk/adapter/jms/worker'
 

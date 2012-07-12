@@ -3,12 +3,12 @@ module Qwirk
   module Adapter
     module ActiveMQ
       class WorkerConfig < JMS::WorkerConfig
-        def initialize(adapter_factory, parent, queue_name, topic_name, options, response_options)
-          if topic_name
-            queue_name = "Consumer.#{parent.name}.VirtualTopic.#{topic_name}"
-            topic_name = nil
+        def init
+          if self.topic_name
+            self.queue_name = "Consumer.#{self.name}.VirtualTopic.#{topic_name}"
+            self.topic_name = nil
           end
-          super(adapter_factory, parent, queue_name, topic_name, options, response_options)
+          super
         end
       end
     end

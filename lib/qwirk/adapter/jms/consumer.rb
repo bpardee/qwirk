@@ -16,7 +16,7 @@ module Qwirk
         def receive
           @message = @consumer.receive
           return nil unless @message
-          return JMS.parse_response(@message)
+          return Util.parse_response(@message)
         end
 
         def acknowledge_message

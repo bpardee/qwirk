@@ -28,20 +28,30 @@ module Qwirk
 
         # Publish the given object and return the reply_queue as the adapter_info.
         def publish(marshaled_object, marshaler, task_id, props)
-          response_handle = @response_options ? MyResponse.new : nil
+          response_handle = @response_options ? MyResponseHandle.new : nil
           # Since we're inline, we'll just unmarshal the object so there is less info to carry around
           object = marshaler.unmarshal(marshaled_object)
           if manager = @adapter_factory.manager
+            @message_handled = false
             manager.worker_configs.each do |worker_config|
               if worker_config.active
                 if @queue_name && @queue_name == worker_config.queue_name
                   run_worker(worker_config, object, response_handle)
+                  @message_handled = true
                   break
                 elsif @topic_name && @topic_name == worker_config.topic_name
                   run_worker(worker_config, object, response_handle)
+                  @message_handled = true
                 end
               end
             end
+            if !@message_handled && !@no_message_handled_warning
+              Qwirk.logger.warn("Publish message #{object.inspect} being dropped as no Qwirk worker has been configured to handle it")
+              @no_message_handled_warning = true
+            end
+          elsif !@no_manager_warning
+            Qwirk.logger.warn("Publish message #{object.inspect} being dropped as no Qwirk manager has been configured for #{@adapter_factory.key}")
+            @no_manager_warning = true
           end
           return response_handle
         end

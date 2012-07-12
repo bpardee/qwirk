@@ -38,7 +38,7 @@ module Qwirk
           @connection.session_pool.producer(:destination => @dest_queue) do |session, producer|
             producer.time_to_live                  = @time_to_live if @time_to_live
             producer.delivery_mode_sym             = @persistent_sym
-            message = JMS.create_message(session, marshaled_object, marshaler.marshal_type)
+            message = Util.create_message(session, marshaled_object, marshaler.marshal_type)
             message.jms_reply_to                   = @reply_queue if @reply_queue
             message['qwirk:marshal']               = marshaler.to_sym.to_s
             message['qwirk:response:time_to_live'] = @response_time_to_live_str if @response_time_to_live_str
@@ -104,7 +104,7 @@ module Qwirk
             end
             return nil unless message
             message.acknowledge
-            return [message.jms_correlation_id, JMS.parse_response(message), message['qwirk:worker']]
+            return [message.jms_correlation_id, Util.parse_response(message), message['qwirk:worker']]
           end
         end
 

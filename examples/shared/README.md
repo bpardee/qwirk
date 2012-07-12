@@ -1,17 +1,17 @@
 ## Step 0
-### Follow the directions for configuring configuring a JMS or InMem adapter located in examples/README
+### Follow the directions for configuring configuring a jms, in_mem, or inline adapter located in ../README
 
 ## Step 1
 ### Start up the application
-* rm -f qwirk_persist.yml
-* rackup -p 4567
+* rm -f qwirk\_persist.yml
+* rackup
 
 ## Step 2
-* Browse to http://localhost:4567
+* Browse to http://localhost:9292
 * Open up the tree to Qwirk => S1 => Attributes
-* Enter 2 for count and click the Update button.
+* Enter 2 for max_count and click the Update button.
 * Open up the tree to Qwirk => S2 => Attributes
-* Enter 3 for count and click the Update button.
+* Enter 3 for max_count and click the Update button.
 * Refresh the browser so that you get the worker updates to the tree
 
 ## Step 3

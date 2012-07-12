@@ -4,10 +4,10 @@ Step 0
 Step 1
 # Start up the application
 rm -f qwirk_persist.yml
-rackup -p 4567
+rackup
 
 Step 2
-# Browse to http://localhost:4567
+# Browse to http://localhost:9292
 # Open up the tree to Worker => Bar => Attributes and click on Attributes
 # Change max_count to 100, idle_worker_timeout to 10, and sleep_time to 5 and click Update.
 
@@ -38,7 +38,7 @@ is no work to be done.  Set a timeout and refresh the attributes to see this in 
 
 Monitoring your workers
 
-Browse to http://localhost:4567/Worker/Bar/timer/attributes.json?reset=true
+Browse to http://localhost:9292/Worker/Bar/timer/attributes.json?reset=true
 
 Publish some messages (possibly modifying the worker's sleep times first) and browse to that address again.
 

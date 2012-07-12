@@ -7,9 +7,11 @@ module Qwirk
         include Rumx::Bean
 
         # Make explicit the instance variables available to the derived adapter classes
-        attr_reader        :name, :manager, :worker_class, :default_options, :stopped, :queue_name, :topic_name, :queue_options, :response_options, :marshaler
+        attr_reader        :adapter_factory, :name, :manager, :worker_class, :default_options, :options,
+                           :stopped, :queue_options, :response_options, :marshaler
+        attr_accessor      :queue_name, :topic_name
 
-        bean_attr_reader   :timer,     :bean,    'Track the times for this worker'
+                           bean_attr_reader   :timer,     :bean,    'Track the times for this worker'
         bean_attr_accessor :log_times, :boolean, 'Log the times for this worker'
 
         # Define the default config values for the attributes all workers will share.  These will be sent as options to the constructor
@@ -23,11 +25,12 @@ module Qwirk
 
         # Create new WorkerConfig to manage workers of a common class
         def initialize(adapter_factory, name, manager, worker_class, default_options, options)
-          @adapter_factory    = adapter_factory
+          @adapter_factory  = adapter_factory
           @name             = name
           @manager          = manager
           @worker_class     = worker_class
           @default_options  = default_options
+          @options          = options
           @stopped          = false
           @queue_name       = worker_class.queue_name(@name)
           @topic_name       = worker_class.topic_name
@@ -38,6 +41,8 @@ module Qwirk
           marshal_sym       = (response_options[:marshal] || self.class.default_marshal_sym)
           @marshaler        = MarshalStrategy.find(marshal_sym)
           @log_times        = adapter_factory.log_times
+
+          init
 
           #Qwirk.logger.debug { "options=#{options.inspect}" }
           default_options.each do |key, value|
@@ -60,6 +65,10 @@ module Qwirk
               Qwirk.logger.warn "WARNING: During initialization of #{worker_class.name} config=#{@name}, assignment of #{key}=#{value} was invalid"
             end
           end
+        end
+
+        # Allow extensions to initialize before setting the attributes
+        def init
         end
 
         def stop

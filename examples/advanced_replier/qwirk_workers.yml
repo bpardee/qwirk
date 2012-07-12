@@ -1,0 +1,13 @@
+demo:
+  CharCount:
+    :min_count: 1
+  ExceptionRaiser:
+    :min_count: 1
+  Length:
+    :min_count: 1
+  Print:
+    :min_count: 1
+  Reverse:
+    :min_count: 1
+  Triple:
+    :min_count: 1

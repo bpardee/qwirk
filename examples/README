@@ -1,1 +1,12 @@
 You can use the default InMem adapter or modify the qwirk.yml file to setup the proper credentials for your ActiveMQ server.
+
+In general, you can run the examples as follows:
+
+rackup
+  or for Inline
+QWIRK_ADAPTER=inline rackup (for inline, only send a few messages as these happen synchronously)
+  or for ActiveMQ with a separate server
+QWIRK_ADAPTER=active_mq_invm rackup
+  or for ActiveMQ invm
+QWIRK_ADAPTER=active_mq_invm rackup
+

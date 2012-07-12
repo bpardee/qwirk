@@ -6,6 +6,11 @@ module Qwirk
       @producer     = publisher
       @adapter_info = adapter_info
       @start        = start
+      @timeout      = false
+    end
+
+    def timeout?
+      @timeout
     end
 
     # Waits the given timeout for a response message on the queue.
@@ -58,9 +63,15 @@ module Qwirk
         if block_given?
           return read_multiple_response(consumer, timeout, &block)
         else
-          response = read_single_response(consumer, timeout)
-          raise response if response.kind_of?(Qwirk::RemoteException)
-          return response
+          tri = read_single_response(consumer, timeout)
+          if tri
+            response = tri[1]
+            raise response if response.kind_of?(Qwirk::RemoteException)
+            return response
+          else
+            @timeout = !tri
+            return nil
+          end
         end
       end
     end
@@ -71,8 +82,7 @@ module Qwirk
 
     def read_single_response(consumer, timeout)
       leftover_timeout = @start + timeout - Time.now
-      message_id, response, @worker_name = consumer.timeout_read(leftover_timeout)
-      return response
+      return consumer.timeout_read(leftover_timeout)
     end
 
     def read_multiple_response(consumer, timeout, &block)
@@ -80,15 +90,16 @@ module Qwirk
       yield worker_response
 
       until worker_response.done? do
-        response = read_single_response(consumer, timeout)
-        if !response
+        tri = read_single_response(consumer, timeout)
+        if !tri
           worker_response.make_timeout_calls
           return
         end
+        ignored_message_id, response, worker_name = tri
         if response.kind_of?(Qwirk::RemoteException)
-          worker_response.make_exception_call(@worker_name, response)
+          worker_response.make_exception_call(worker_name, response)
         else
-          worker_response.make_message_call(@worker_name, response)
+          worker_response.make_message_call(worker_name, response)
         end
       end
     end

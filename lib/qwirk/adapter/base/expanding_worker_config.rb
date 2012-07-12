@@ -14,7 +14,8 @@ module Qwirk
           super.merge(:min_count => 0, :max_count => 0, :idle_worker_timeout => 60, :max_read_threshold => 1.0)
         end
 
-        def initialize(adapter_factory, name, manager, worker_class, default_options, options)
+        def init
+          super
           @workers          = []
           @min_count        = 0
           @max_count        = 0
@@ -22,7 +23,6 @@ module Qwirk
           @index_mutex      = Mutex.new
           @worker_mutex     = Mutex.new
           @worker_condition = ConditionVariable.new
-          super
         end
 
         def count
@@ -44,11 +44,6 @@ module Qwirk
           return if @max_count == new_max_count
           raise "#{self.worker_class.name}-#{self.name}: Can't change count since we've been stopped" if self.stopped
           Qwirk.logger.info "#{self.worker_class.name}: Changing max number of workers from #{@max_count} to #{new_max_count}"
-          begin
-            raise 'foo'
-          rescue Exception => e
-            puts e.backtrace.join("\n\t")
-          end
           self.min_count = new_max_count if @min_count > new_max_count
           @min_count = 1 if @min_count == 0 && new_max_count > 0
           @worker_mutex.synchronize do

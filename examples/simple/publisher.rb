@@ -19,9 +19,9 @@ class Publisher
       [ :sleep_time, :float,   'Time to sleep between messages',        0.5                ]
   ]
 
-  def initialize(adapter_factory_key)
-    @bar_publisher = Qwirk[adapter_factory_key].create_publisher(:queue_name => 'Bar', :marshal => :bson)
-    @baz_publisher = Qwirk[adapter_factory_key].create_publisher(:queue_name => 'Baz', :marshal => :string)
+  def initialize(adapter_key)
+    @bar_publisher = Qwirk[adapter_key].create_publisher(:queue_name => 'Bar', :marshal => :bson)
+    @baz_publisher = Qwirk[adapter_key].create_publisher(:queue_name => 'Baz', :marshal => :string)
 
     @bar_count = 0
     @baz_count = 0
