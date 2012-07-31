@@ -133,7 +133,7 @@ module Qwirk
     # clean up any resources.  We don't want to clobber resources while a message is being processed so processing_mutex will surround
     # message processessing and worker closing.
     # From a JMS perspective, stop all workers (close consumer and session), stop the config.
-    # From an InMem perspective, we don't want the workers stopping until all messages in the queue have been processed.
+    # From an InMemory perspective, we don't want the workers stopping until all messages in the queue have been processed.
     # Therefore we want to stop the
     def stop
       Qwirk.logger.debug "#{self}: In base worker stop"

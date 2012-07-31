@@ -4,13 +4,9 @@ http://github.com/ClarityServices/qwirk
 
 ## Description:
 
-JRuby library for performing background tasks via JMS.
+Generic queuing and background processing library.
 
 Alpha version.  API still subject to change.
-
-## Features/Problems:
-
-Currently tested only for ActiveMQ
 
 ## Install:
 
@@ -18,9 +14,9 @@ Currently tested only for ActiveMQ
 
 ## Rails Usage:
 
-TODO: This stuff is all obsolete modern_times documentation.  Look at the examples for usage information.
+TODO: This stuff is all obsolete modern_times documentation.  Look at the project http://github.com/ClarityServices/qwirk_examples for usage information.
 
-Create config/jms.yml which might look as follows:
+Create config/qwirk.yml which might look as follows:
 
     development_server: &defaults
       :factory: org.apache.activemq.ActiveMQConnectionFactory

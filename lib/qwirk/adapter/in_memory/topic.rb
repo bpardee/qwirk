@@ -1,6 +1,6 @@
 module Qwirk
   module Adapter
-    module InMem
+    module InMemory
 
       class Topic
         def initialize(name)

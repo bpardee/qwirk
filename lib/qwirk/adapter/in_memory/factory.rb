@@ -1,6 +1,6 @@
 module Qwirk
   module Adapter
-    module InMem
+    module InMemory
       module Factory
         class << self
           def init

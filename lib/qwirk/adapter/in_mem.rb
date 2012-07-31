@@ -1,7 +1,0 @@
-require 'qwirk/adapter/in_mem/factory'
-require 'qwirk/adapter/in_mem/publisher'
-require 'qwirk/adapter/in_mem/queue'
-require 'qwirk/adapter/in_mem/reply_queue'
-require 'qwirk/adapter/in_mem/topic'
-require 'qwirk/adapter/in_mem/worker_config'
-require 'qwirk/adapter/in_mem/worker'

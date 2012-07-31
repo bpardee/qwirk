@@ -1,7 +1,7 @@
 # Handle Messaging and Queuing using JMS
 module Qwirk
   module Adapter
-    module InMem
+    module InMemory
 
       class WorkerConfig < Qwirk::Adapter::Base::ExpandingWorkerConfig
 

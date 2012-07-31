@@ -1,6 +1,6 @@
 module Qwirk
   module Adapter
-    module InMem
+    module InMemory
       class Publisher
 
         def initialize(adapter_factory, queue_name, topic_name, options, response_options)

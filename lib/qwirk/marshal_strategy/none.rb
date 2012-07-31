@@ -1,6 +1,6 @@
 module Qwirk
   module MarshalStrategy
-    # Should only be used with InMem strategy
+    # Should only be used with InMemory strategy
     module None
       extend self
 

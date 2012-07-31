@@ -61,7 +61,7 @@ module Qwirk
 
         def stop
           Qwirk.logger.debug { "In expanding_worker_config stop" }
-          # First stop the impl.  For InMem, this will not return until all the messages in the queue have
+          # First stop the impl.  For InMemory, this will not return until all the messages in the queue have
           # been processed since these messages are not persistent.
           @impl.stop
           @worker_mutex.synchronize do

@@ -1,5 +1,3 @@
 require 'qwirk/adapter/base'
 require 'qwirk/adapter/inline'
-require 'qwirk/adapter/in_mem'
-require 'qwirk/adapter/jms'
-require 'qwirk/adapter/active_mq'
+require 'qwirk/adapter/in_memory'

@@ -1,6 +1,6 @@
 module Qwirk
   module Adapter
-    module InMem
+    module InMemory
 
       class Queue
         # TODO: Look into reimplementing using a Ruby Queue which is probably better performant
