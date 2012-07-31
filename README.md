@@ -4,8 +4,7 @@ http://github.com/ClarityServices/qwirk
 
 ## Description:
 
-Generic queuing and background processing library.
-
+Library for performing background tasks as well as asynchronous and parallel RPC calls
 Alpha version.  API still subject to change.
 
 ## Install:
