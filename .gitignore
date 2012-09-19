@@ -2,5 +2,6 @@
 .bundle/
 log/
 Gemfile.lock
-.rvmrc
+.rbenv*
 pkg/
+vendor/bundle

@@ -31,7 +31,7 @@ module Qwirk
 
         def min_count=(new_min_count)
           return if @min_count == new_min_count
-          raise "#{self.worker_class.name}-#{self.name}: Can't change count since we've been stopped" if self.stopped
+          raise "#{self.worker_class.name}-#{self.name}: Can't change count since we've been stopped" if self.stopped?
           Qwirk.logger.info "#{self.worker_class.name}: Changing min number of workers from #{@min_count} to #{new_min_count}"
           self.max_count = new_min_count if @max_count < new_min_count
           @worker_mutex.synchronize do
@@ -42,34 +42,47 @@ module Qwirk
 
         def max_count=(new_max_count)
           return if @max_count == new_max_count
-          raise "#{self.worker_class.name}-#{self.name}: Can't change count since we've been stopped" if self.stopped
+          raise "#{self.worker_class.name}-#{self.name}: Can't change count since we've been stopped" if self.stopped?
           Qwirk.logger.info "#{self.worker_class.name}: Changing max number of workers from #{@max_count} to #{new_max_count}"
           self.min_count = new_max_count if @min_count > new_max_count
           @min_count = 1 if @min_count == 0 && new_max_count > 0
+          deleted_workers = []
           @worker_mutex.synchronize do
             @timer ||= Rumx::Beans::TimerAndError.new
             if @workers.size > new_max_count
-              @workers[new_max_count..-1].each { |worker| worker.stop }
-              while @workers.size > new_max_count
-                @workers.last.stop
-                @worker_condition.wait(@worker_mutex)
-              end
+              deleted_workers = @workers[new_max_count..-1]
+              deleted_workers.each { |worker| worker.stop }
             end
             @max_count = new_max_count
           end
+          deleted_workers.each { |worker| worker.join }
         end
 
-        def stop
-          Qwirk.logger.debug { "In expanding_worker_config stop" }
-          # First stop the impl.  For InMemory, this will not return until all the messages in the queue have
-          # been processed since these messages are not persistent.
-          @impl.stop
-          @worker_mutex.synchronize do
-            @workers.each { |worker| worker.stop }
-            while @workers.size > 0
-              @worker_condition.wait(@worker_mutex)
+        # TODO: Need this?  Should I only be calling worker.stop when stopping individual workers?
+        #def stop
+        #  Qwirk.logger.debug { "#{self}: In expanding_worker_config stop" }
+        #  # First stop the impl.  For InMemory, this will not return until all the messages in the queue have
+        #  # been processed since these messages are not persistent.
+        #  @worker_mutex.synchronize do
+        #    @workers.each { |worker| worker.stop }
+        #    while @workers.size > 0
+        #      @worker_condition.wait(@worker_mutex)
+        #    end
+        #    super
+        #  end
+        #end
+
+        def join(timeout=nil)
+          workers = @worker_mutex.synchronize { @workers.dup }
+          if timeout
+            end_time = Time.now + timeout
+            workers.each do |worker|
+              t = end_time - Time.now
+              t = 0 if t < 0
+              worker.join(t)
             end
-            super
+          else
+            workers.each { |worker| worker.join }
           end
         end
 
@@ -103,7 +116,7 @@ module Qwirk
               #Qwirk.logger.debug { "#{self}: start=#{start_read_time} end=#{end_read_time} thres=#{@max_read_threshold} add_new_worker=#{add_new_worker}" }
               add_new_worker = false if (end_read_time - start_read_time) > @max_read_threshold
             end
-            add_worker if add_new_worker && @workers.size < @max_count
+            add_worker if !self.stopped? && add_new_worker && @workers.size < @max_count
           end
         end
 

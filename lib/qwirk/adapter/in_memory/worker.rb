@@ -46,6 +46,15 @@ module Qwirk
           @queue.interrupt_read
         end
 
+        # If the worker_config has been commanded to stop, workers will continue processing messages until this returns true
+        def ready_to_stop?
+          @queue.stopped?
+        end
+
+        def to_s
+          "#{@name} (InMemory)"
+        end
+
         ## End of required override methods for worker impl
         private
 

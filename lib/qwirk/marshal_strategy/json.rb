@@ -18,7 +18,7 @@ module Qwirk
         end
 
         def unmarshal(msg)
-          ::JSON::Parser.new(msg).parse
+          ::JSON.parse(msg)
         end
 
       rescue LoadError => e

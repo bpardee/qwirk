@@ -85,9 +85,9 @@ module Qwirk
           end
 
           def stop
+            # TODO - Need to think about what should actually occur here?
             return if @stopped
             Qwirk.logger.info "Stopping Task worker #{@consumer_queue}"
-            # Don't clobber the session before a reply
             @producer_queue.interrupt_read
             @stopped = true
           end

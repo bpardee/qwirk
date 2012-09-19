@@ -9,14 +9,13 @@ module Qwirk
         attr_accessor :name, :max_size
 
         def initialize(name)
-          @name                   = name
-          @max_size               = 0
-          @outstanding_hash_mutex = Mutex.new
-          @read_condition         = ConditionVariable.new
-          @write_condition        = ConditionVariable.new
-          @stop_condition         = ConditionVariable.new
-          @array                  = []
-          @stopped                = false
+          @name            = name
+          @max_size        = 0
+          @array_mutex     = Mutex.new
+          @read_condition  = ConditionVariable.new
+          @write_condition = ConditionVariable.new
+          @array           = []
+          @stopping        = false
         end
 
         def size
@@ -24,47 +23,45 @@ module Qwirk
         end
 
         def stop
-          return if @stopped
-          @stopped = true
-          @outstanding_hash_mutex.synchronize do
+          return if @stopping
+          @stopping = true
+          @array_mutex.synchronize do
             @write_condition.broadcast
-            until @array.empty?
-              @stop_condition.wait(@outstanding_hash_mutex)
-            end
             @read_condition.broadcast
+          end
+        end
+
+        def stopped?
+          @array_mutex.synchronize do
+            return @stopping && @array.empty?
           end
         end
 
         def interrupt_read
-          @outstanding_hash_mutex.synchronize do
+          @array_mutex.synchronize do
             @read_condition.broadcast
           end
         end
 
-        # Block read until a message or we get stopped.  stoppable is an object that responds to stopped (a worker or some kind of consumer)
+        # Block read until a message or we get stopped.
         def read(stoppable)
-          @outstanding_hash_mutex.synchronize do
-            until @stopped  || stoppable.stopped do
-              unless @array.empty?
+          @array_mutex.synchronize do
+            until stoppable.stopped || (@stopping  && @array.empty?)
+              if @array.empty?
+                @read_condition.wait(@array_mutex)
+              else
                 @write_condition.signal
                 return @array.shift
               end
-              @read_condition.wait(@outstanding_hash_mutex)
-            end
-            return if stoppable.stopped
-            # We're not persistent, so even though we're stopped we're going to allow our stoppables to keep reading until the queue's empty
-            unless @array.empty?
-              @stop_condition.signal
-              return @array.shift
             end
           end
           return nil
         end
 
         def write(obj)
-          @outstanding_hash_mutex.synchronize do
+          @array_mutex.synchronize do
             # We just drop the message if no workers have been configured yet
-            while !@stopped
+            while !@stopping
               if @max_size == 0
                 Qwirk.logger.warn "No worker for queue #{@name}, dropping message #{obj.inspect}"
                 return
@@ -75,8 +72,9 @@ module Qwirk
                 return
               end
               # TODO: Let's allow various write_full_modes such as :block, :remove_oldest, ? (Currently only blocks)
-              @write_condition.wait(@outstanding_hash_mutex)
+              @write_condition.wait(@array_mutex)
             end
+            Qwirk.logger.warn "Queue has been stopped #{@name}, dropping message #{obj.inspect}"
           end
         end
 

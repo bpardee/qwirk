@@ -16,6 +16,10 @@ module Qwirk
           super.merge(:queue_max_size => 100)
         end
 
+        def self.in_process?(config)
+          true
+        end
+
         def init
           super
           @queue = Factory.get_worker_queue(self.name, self.queue_name, self.topic_name, @queue_max_size)

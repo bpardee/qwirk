@@ -1,7 +1,4 @@
-require 'qwirk'
-require 'shoulda'
-require 'test/unit'
-require 'fileutils'
+require File.expand_path('../../test_helper', __FILE__)
 
 class DummyWorker
   include Qwirk::BaseWorker

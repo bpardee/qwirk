@@ -40,6 +40,10 @@ module Qwirk
         def stop
         end
 
+        def ready_to_stop?
+          true
+        end
+
         ## End of required override methods for worker impl
         private
 

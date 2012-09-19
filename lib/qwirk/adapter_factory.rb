@@ -21,7 +21,7 @@ module Qwirk
       @log_times = config.delete(:log_times)
 
       key = config.delete(:adapter)
-      raise "No adapter definition" unless key
+      raise "No adapter definition config=#{config.inspect}" unless key
       key = key.to_sym
       @publisher_class, @worker_config_class, block = @@adapter_hash[key]
       raise "No adapter matching #{key}" unless @publisher_class
@@ -43,6 +43,10 @@ module Qwirk
 
     def create_publisher_impl(queue_name, topic_name, options, response_options)
       @publisher_class.new(self, queue_name, topic_name, options, response_options)
+    end
+
+    def in_process?
+      @worker_config_class.in_process?(@config)
     end
   end
 end

@@ -4,7 +4,7 @@ module Qwirk
   # TODO: Is this necessary anymore or just put in worker.rb?  Decide when flat file adapter is implemented.
   module BaseWorker
 
-    attr_accessor :index, :thread, :config
+    attr_accessor :index, :config
 
     module ClassMethods
       def default_name
@@ -69,10 +69,6 @@ module Qwirk
 
     def stop
       raise "Need to override stop method in #{self.class.name}"
-    end
-
-    def join
-      thread.join
     end
 
     def status

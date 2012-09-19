@@ -9,6 +9,7 @@ module Qwirk
     attr_reader   :env, :worker_configs, :name
 
     bean_attr_accessor :poll_time, :float, 'How often the manager should poll the workers for their status for use by :idle_worker_timeout and :max_read_threshold'
+    bean_attr_accessor :stop_time, :float, 'How long to wait while shutting down for graceful worker stop'
 
     @@default_options = {}
 
@@ -30,7 +31,8 @@ module Qwirk
       options           = @@default_options.merge(options)
       @stopped          = false
       @name             = options[:name] || Qwirk::DEFAULT_NAME
-      @poll_time        = 3.0
+      @poll_time        = options[:poll_time] || 3.0
+      @stop_time        = options[:stop_time]
       @worker_configs   = []
       @env              = options[:env]
       @worker_options   = parse_worker_file(options[:worker_file])
@@ -51,13 +53,12 @@ module Qwirk
       end
 
       start_timer_thread
-      stop_on_signal if options[:stop_on_signal]
+      at_exit { stop }
     end
 
     # Create a timer_thread to make periodic calls to the worker_configs in order to do such things as expand/contract
     # workers, etc.
     def start_timer_thread
-      # TODO: Optionize hard-coded values
       @timer_thread = Thread.new do
         begin
           while !@stopped
@@ -75,17 +76,23 @@ module Qwirk
     def stop
       return if @stopped
       @stopped = true
+      Qwirk.logger.debug "Stopping manager"
       @timer_thread.wakeup
       @worker_configs.each { |worker_config| worker_config.stop }
+      if @stop_time
+        end_time = Time.now + @stop_time
+        @worker_configs.each do |worker_config|
+          t = end_time - Time.now
+          t = 0 if t < 0
+          worker_config.join(t)
+        end
+      else
+        @worker_configs.each { |worker_config| worker_config.join }
+      end
     end
 
-    def stop_on_signal
-      ['HUP', 'INT', 'TERM'].each do |signal_name|
-        Signal.trap(signal_name) do
-          Qwirk.logger.info "Caught #{signal_name}"
-          stop
-        end
-      end
+    def stopped?
+      @stopped
     end
 
     # Store off any options that are no longer set to default

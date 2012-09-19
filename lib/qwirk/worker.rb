@@ -37,7 +37,7 @@ module Qwirk
     include Qwirk::BaseWorker
 
     attr_accessor :message
-    attr_reader   :status, :impl, :start_worker_time, :start_read_time, :start_processing_time
+    attr_reader   :thread, :status, :impl, :start_worker_time, :start_read_time, :start_processing_time
 
     module ClassMethods
       def queue(name, opts={})
@@ -122,7 +122,7 @@ module Qwirk
     end
 
     def start
-      self.thread = Thread.new do
+      @thread = Thread.new do
         java.lang.Thread.current_thread.name = "Qwirk worker: #{self}" if RUBY_PLATFORM == 'jruby'
         #Qwirk.logger.debug "#{worker}: Started thread with priority #{Thread.current.priority}"
         event_loop
@@ -136,14 +136,25 @@ module Qwirk
     # From an InMemory perspective, we don't want the workers stopping until all messages in the queue have been processed.
     # Therefore we want to stop the
     def stop
-      Qwirk.logger.debug "#{self}: In base worker stop"
+      Qwirk.logger.debug "#{self}: In worker stop"
       @status  = 'Stopping'
       @stopped = true
       @processing_mutex.synchronize do
         # This should interrupt @impl.receive_message above and cause it to return nil
         @impl.stop
       end
-      Qwirk.logger.debug "#{self}: base worker stop complete"
+    end
+
+    def join(timeout=nil)
+      time_str = timeout ? "#{timeout} seconds" : 'indefinitely'
+      Qwirk.logger.info "#{self}: Waiting #{time_str} for worker to stop"
+      # See http://jira.codehaus.org/browse/JRUBY-6896
+      if timeout && !self.thread.join(timeout)
+        Qwirk.logger.warn "#{self}: WARNING - worker stop commanded but thread did not exit gracefully in #{timeout} seconds"
+      else
+        self.thread.join
+      end
+      Qwirk.logger.info "#{self}: worker stop complete"
     end
 
     def perform(object)
@@ -163,7 +174,7 @@ module Qwirk
     def event_loop
       Qwirk.logger.debug "#{self}: Starting receive loop"
       @start_worker_time = Time.now
-      while !@stopped && !config.stopped
+      until @stopped || (config.stopped? && @impl.ready_to_stop?)
         Qwirk.logger.debug "#{self}: Waiting for read"
         @start_read_time = Time.now
         msg = @impl.receive_message
@@ -186,8 +197,6 @@ module Qwirk
       Qwirk.logger.error "#{self}: Exception, thread terminating: #{e.message}\n\t#{e.backtrace.join("\n\t")}"
     ensure
       @status = 'Stopped'
-      # TODO: necessary?
-      @impl.stop
       Qwirk.logger.flush if Qwirk.logger.respond_to?(:flush)
       config.worker_stopped(self)
     end

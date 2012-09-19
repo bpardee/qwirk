@@ -16,6 +16,10 @@ module Qwirk
           super.merge(:active => false)
         end
 
+        def self.in_process?(config)
+          true
+        end
+
         # Hack - Steal attribute from expanding_worker_config so test config can share development config
         def min_count=(min_count)
           @active = (min_count > 0)

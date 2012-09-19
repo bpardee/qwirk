@@ -7,8 +7,9 @@ module Qwirk
 
   DEFAULT_NAME = 'Qwirk'
 
-  @@config = nil
-  @@hash   = {}
+  @@config      = nil
+  @@environment = nil
+  @@hash        = {}
 
   class MyBean
     include Rumx::Bean
@@ -22,27 +23,49 @@ module Qwirk
   end
 
   def self.config=(config)
+    #if config.has_key?(:adapter)
     @@config = config
     Rumx::Bean.root.bean_add_child(DEFAULT_NAME, MyBean.new(@@hash))
+  end
+
+  def self.environment=(environment)
+    @@environment = environment
+  end
+
+  def self.config_file=(config_file)
+    raise "No such file: #{config_file}" unless File.exist?(config_file)
+    config = YAML.load(ERB.new(File.read(config_file), nil, '-').result(binding))
+    config = config[@@environment] if config && @@environment
+    if config.has_key?(:adapter) || config.has_key?('adapter')
+      # Single level, one default adapter
+      @@config = {'default' => config}
+    else
+      @@config = config
+    end
   end
 
   def self.[](adapter_key)
     if @@config.nil?
       if defined?(Rails)
-        # Allow user to use JMS w/o modifying qwirk.yml which could be checked in and hose other users
-        env = ENV['QWIRK_ENV'] || Rails.env
-        self.config = YAML.load(ERB.new(File.read(Rails.root.join("config", "qwirk.yml")), nil, '-').result(binding))[env]
+        # Allow user to use a different adapter w/o modifying qwirk.yml which could be checked in and hose other users
+        self.environment = ENV['QWIRK_ENV'] || Rails.env
+        self.config_file = Rails.root.join('config', 'qwirk.yml')
         Manager.default_options = {
-            :persist_file    => Rails.root.join('log', 'qwirk_persist.yml'),
+            :persist_file    => Rails.root.join('log',    'qwirk_persist.yml'),
             :worker_file     => Rails.root.join('config', 'qwirk_workers.yml'),
             :stop_on_signal  => true,
-            :env             => env,
+            :env             => @@environment,
         }
       end
     end
     raise 'Qwirk not configured' unless @@config && @@config[adapter_key]
-    Qwirk.logger.debug {"Creating Qwirk::AdapterFactory key=#{adapter_key} config=#{@@config[adapter_key].inspect}"}
-    @@hash[adapter_key] ||= Qwirk::AdapterFactory.new(adapter_key, @@config[adapter_key])
+    @@hash[adapter_key] ||= begin
+      Qwirk.logger.debug {"Creating Qwirk::AdapterFactory key=#{adapter_key} config=#{@@config[adapter_key].inspect}"}
+      config = @@config[adapter_key]
+      raise "No config for key #{adapter_key}, keys=#{config.keys.inspect}" unless config
+      # Create the adapter, turning all the keys into symbols
+      Qwirk::AdapterFactory.new(adapter_key, Hash[config.map{|(k,v)| [k.to_sym,v]}])
+    end
   end
 
   def self.register_adapter(key, publisher_class, worker_config_class, &block)
@@ -51,6 +74,25 @@ module Qwirk
 
   def self.fail_queue_name(queue_name)
     return "#{queue_name.to_s}Fail"
+  end
+
+  ## From here on down are proxies to the default adapter to keep the API simpler for setups with a single adapter
+  # TODO: Allow the setting of the default adapter
+
+  def self.create_publisher(options={})
+    self['default'].create_publisher(options)
+  end
+
+  def self.create_manager(options={})
+    self['default'].create_manager(options)
+  end
+
+  def self.create_publisher_impl(queue_name, topic_name, options, response_options)
+    self['default'].create_publisher_impl(queue_name, topic_name, options, response_options)
+  end
+
+  def self.in_process?
+    self['default'].in_process?
   end
 end
 

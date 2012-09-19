@@ -14,6 +14,11 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'rake'
   s.add_development_dependency 'rdoc'
   s.add_development_dependency 'bson'
+  s.add_development_dependency 'bson_ext' unless s.platform.to_s == 'java'
   s.add_development_dependency 'json'
-  s.add_development_dependency 'shoulda'
+  s.add_development_dependency 'minitest'
+  #s.add_development_dependency 'minitest-rails-capybara'
+  #s.add_development_dependency 'mocha'
+  #s.add_development_dependency 'factory_girl_rails'
+  s.add_development_dependency 'turn'
 end
