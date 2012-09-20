@@ -76,7 +76,7 @@ module Qwirk
     def stop
       return if @stopped
       @stopped = true
-      Qwirk.logger.debug "Stopping manager"
+      Qwirk.logger.info "Stopping manager"
       @timer_thread.wakeup
       @worker_configs.each { |worker_config| worker_config.stop }
       if @stop_time
@@ -89,6 +89,7 @@ module Qwirk
       else
         @worker_configs.each { |worker_config| worker_config.join }
       end
+      Qwirk.logger.info "Done stopping manager"
     end
 
     def stopped?

@@ -53,7 +53,6 @@ module Qwirk
         Manager.default_options = {
             :persist_file    => Rails.root.join('log',    'qwirk_persist.yml'),
             :worker_file     => Rails.root.join('config', 'qwirk_workers.yml'),
-            :stop_on_signal  => true,
             :env             => @@environment,
         }
       end
