@@ -55,7 +55,7 @@ module Qwirk
     end
 
     def self.included(base)
-      Rumx::Bean.included(base)
+      ::Rumx::Bean.included(base)
       base.extend(ClassMethods)
       if base.kind_of?(Class)
         @worker_classes ||= []

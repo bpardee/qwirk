@@ -48,7 +48,7 @@ module Qwirk
           @min_count = 1 if @min_count == 0 && new_max_count > 0
           deleted_workers = []
           @worker_mutex.synchronize do
-            @timer ||= Rumx::Beans::TimerAndError.new
+            @timer ||= ::Rumx::Beans::TimerAndError.new
             if @workers.size > new_max_count
               deleted_workers = @workers[new_max_count..-1]
               deleted_workers.each { |worker| worker.stop }

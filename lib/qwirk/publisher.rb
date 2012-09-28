@@ -1,7 +1,7 @@
 # Protocol independent class to handle Publishing
 module Qwirk
   class Publisher
-    include Rumx::Bean
+    include ::Rumx::Bean
 
     #attr_reader :producer_options, :persistent, :reply_queue
     attr_reader :response_options, :impl, :marshaler

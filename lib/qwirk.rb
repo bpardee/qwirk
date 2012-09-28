@@ -12,7 +12,7 @@ module Qwirk
   @@hash        = {}
 
   class MyBean
-    include Rumx::Bean
+    include ::Rumx::Bean
 
     # These are actually AdapterFactory's but presenting as adapters to the user.
     bean_attr_reader :adapters,  :hash, 'Adapters', :hash_type => :bean
@@ -25,7 +25,7 @@ module Qwirk
   def self.config=(config)
     #if config.has_key?(:adapter)
     @@config = config
-    Rumx::Bean.root.bean_add_child(DEFAULT_NAME, MyBean.new(@@hash))
+    ::Rumx::Bean.root.bean_add_child(DEFAULT_NAME, MyBean.new(@@hash))
   end
 
   def self.environment=(environment)
@@ -109,5 +109,6 @@ require 'qwirk/remote_exception'
 require 'qwirk/task'
 require 'qwirk/worker'
 require 'qwirk/reply_worker'
+require 'qwirk/remote'
 
 require 'qwirk/engine' if defined?(Rails)

@@ -4,7 +4,7 @@ module Qwirk
   module Adapter
     module Base
       class WorkerConfig
-        include Rumx::Bean
+        include ::Rumx::Bean
 
         # Make explicit the instance variables available to the derived adapter classes
         attr_reader        :adapter_factory, :name, :manager, :worker_class, :default_options, :options,

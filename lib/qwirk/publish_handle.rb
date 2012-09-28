@@ -112,6 +112,7 @@ module Qwirk
         @message_hash            = {}
         @timeout_hash            = {}
         @exception_hash          = {}
+        @default_message_block   = nil
         @default_timeout_block   = nil
         @default_exception_block = nil
         @done_array              = []
@@ -123,8 +124,11 @@ module Qwirk
       end
 
       def on_message(*names, &block)
-        raise 'Must explicitly define all message handlers so we know that we\'re done' if names.empty?
-        names.each {|name| @message_hash[name] = block}
+        if names.empty?
+          @default_message_block = block
+        else
+          names.each {|name| @message_hash[name] = block}
+        end
       end
 
       def on_timeout(*names, &block)
@@ -147,13 +151,13 @@ module Qwirk
       def make_message_call(name, obj)
         # Give the client access to the name
         @name = name
-        block = @message_hash[name]
+        block = @message_hash[name] || @default_message_block
         block.call(obj) if block
         @done_array << name
       end
 
       def done?
-        (@message_hash.keys - @done_array).empty?
+        !@default_message_block && (@message_hash.keys - @done_array).empty?
       end
 
       def make_timeout_calls

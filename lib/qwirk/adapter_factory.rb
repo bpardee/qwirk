@@ -2,7 +2,7 @@ module Qwirk
 
   # Defines the queuing adapter.  Currently, only JMS and InMemory.
   class AdapterFactory
-    include Rumx::Bean
+    include ::Rumx::Bean
 
     attr_reader :key, :config, :log_times, :adapter_info, :worker_config_class, :manager
 
@@ -25,11 +25,12 @@ module Qwirk
       key = key.to_sym
       @publisher_class, @worker_config_class, block = @@adapter_hash[key]
       raise "No adapter matching #{key}" unless @publisher_class
+      self.remote = config.delete(:remote)
       @adapter_info = block.call(config) if block
     end
 
     def create_publisher(options={})
-      @publisher_parent ||= Rumx::Beans::Folder.new
+      @publisher_parent ||= ::Rumx::Beans::Folder.new
       publisher = Publisher.new(self, @config.merge(options))
       @publisher_parent.bean_add_child(publisher.to_s, publisher)
       return publisher
@@ -47,6 +48,12 @@ module Qwirk
 
     def in_process?
       @worker_config_class.in_process?(@config)
+    end
+
+    def remote=(remote_options)
+      # If remote was just set to true, then create an empty options hash for it
+      remote_options = {} if remote_options == true
+      Remote.setup(self, remote_options) if remote_options
     end
   end
 end

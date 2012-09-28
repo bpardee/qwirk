@@ -6,7 +6,7 @@ module Qwirk
   #     :
   module Task
     #include Qwirk::BaseWorker
-    include Rumx::Bean
+    include ::Rumx::Bean
 
     bean_attr_accessor :max_pending_records, :integer, 'The max number of records that can be published without having been responded to (publishing blocks at this point).'
     bean_attr_reader   :task_id,             :string,  'The ID for this task'
@@ -22,7 +22,7 @@ module Qwirk
 
     def self.included(base)
       #Qwirk::BaseWorker.included(base)
-      Rumx::Bean.included(base)
+      ::Rumx::Bean.included(base)
       base.extend(ClassMethods)
     end
 

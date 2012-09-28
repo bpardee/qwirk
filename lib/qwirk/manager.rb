@@ -5,7 +5,7 @@ require 'rumx'
 
 module Qwirk
   class Manager
-    include Rumx::Bean
+    include ::Rumx::Bean
     attr_reader   :env, :worker_configs, :name
 
     bean_attr_accessor :poll_time, :float, 'How often the manager should poll the workers for their status for use by :idle_worker_timeout and :max_read_threshold'
