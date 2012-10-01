@@ -8,7 +8,7 @@ module Qwirk
 
         # Make explicit the instance variables available to the derived adapter classes
         attr_reader        :adapter_factory, :name, :manager, :worker_class, :default_options, :options,
-                           :queue_options, :response_options, :marshaler
+                           :queue_options, :response_options, :marshaler, :marshal_sym
         attr_accessor      :queue_name, :topic_name
 
         bean_attr_reader   :timer,     :bean,    'Track the times for this worker'
@@ -55,8 +55,8 @@ module Qwirk
           @response_options = @queue_options[:response] || {}
 
           # Defines how we will marshal the response
-          marshal_sym       = (response_options[:marshal] || self.class.default_marshal_sym)
-          @marshaler        = MarshalStrategy.find(marshal_sym)
+          @marshal_sym      = (response_options[:marshal] || self.class.default_marshal_sym)
+          @marshaler        = MarshalStrategy.find(@marshal_sym)
           @log_times        = adapter_factory.log_times
 
           init
