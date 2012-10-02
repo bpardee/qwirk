@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'qwirk'
-  s.version     = '0.2.0'
+  s.version     = '0.2.1'
   s.summary     = 'Background task and Asynchronous RPC library'
   s.description = 'Library for performing background tasks as well as asynchronous and parallel RPC calls'
   s.authors     = ['Brad Pardee']

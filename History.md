@@ -1,6 +1,11 @@
 Qwirk Changelog
 =====================
 
+0.2.1
+-----
+
+ - Fix for sending back marshaler symbol in response.
+
 0.2.0
 -----
 
