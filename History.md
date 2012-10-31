@@ -1,6 +1,11 @@
 Qwirk Changelog
 =====================
 
+0.2.2
+-----
+
+ - Fix bug that sends negative value for timeout to ConditionVariable#wait.
+
 0.2.1
 -----
 

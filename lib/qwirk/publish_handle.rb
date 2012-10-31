@@ -82,6 +82,7 @@ module Qwirk
 
     def read_single_response(consumer, timeout)
       leftover_timeout = @start + timeout - Time.now
+      leftover_timeout = 0 if leftover_timeout < 0
       return consumer.timeout_read(leftover_timeout)
     end
 

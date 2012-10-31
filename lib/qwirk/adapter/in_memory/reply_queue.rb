@@ -13,6 +13,7 @@ module Qwirk
         def timeout_read(timeout)
           @outstanding_hash_mutex.synchronize do
             return @array.shift unless @array.empty?
+            return nil unless timeout > 0
             timed_read_condition_wait(timeout)
             return @array.shift
           end
