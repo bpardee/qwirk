@@ -1,6 +1,11 @@
 Qwirk Changelog
 =====================
 
+0.2.4
+-----
+
+ - Don't try to wakeup a thread that may have exited already.
+
 0.2.3
 -----
 
