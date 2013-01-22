@@ -1,6 +1,11 @@
 Qwirk Changelog
 =====================
 
+0.2.3
+-----
+
+ - Fix for wakeup that intermittently causes exit issues.
+
 0.2.2
 -----
 

@@ -77,7 +77,7 @@ module Qwirk
       return if @stopped
       @stopped = true
       Qwirk.logger.info "Stopping manager"
-      @timer_thread.wakeup
+      @timer_thread.wakeup rescue nil
       @worker_configs.each { |worker_config| worker_config.stop }
       if @stop_time
         end_time = Time.now + @stop_time
